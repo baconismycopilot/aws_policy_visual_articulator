@@ -1,0 +1,14 @@
+/*
+html, body {
+  padding: 0;
+  margin: 0;
+}
+*/
+
+html, body {
+  background-color: #d3d3d3;
+  font-family: helvetica, arial, sans-serif;
+  color: #333333;
+}
+
+
