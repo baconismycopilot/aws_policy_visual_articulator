@@ -709,7 +709,11 @@ function drawConditionSection(statement) {
 // --- output -------------------------------------------------------------------
 
 function currentJSON() {
-    return JSON.stringify(buildPolicy(state.policyType, state.statements, context), null, 2);
+    return JSON.stringify(
+        buildPolicy(state.policyType, state.statements, context, peekService),
+        null,
+        2,
+    );
 }
 
 function drawOutput() {

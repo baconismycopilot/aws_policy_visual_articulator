@@ -41,14 +41,16 @@ terms, not this project's — see [NOTICE](NOTICE).
 These come straight out of the dataset, and are the reason this is more useful
 than hand-writing JSON:
 
-- **Actions that can't be scoped.** Some actions have no resource type at all —
-  they only ever match `Resource: "*"`. Pairing one with a specific ARN produces
-  a statement that grants nothing. Reported as an **error**.
+- **Actions that can't be scoped are split out automatically.** Some actions
+  have no resource type at all — `eks:CreateCluster`, for instance — so they
+  only ever match `Resource: "*"`. Listing one alongside specific ARNs produces
+  a grant that silently never applies: IAM accepts the policy, the permission
+  just never takes effect. The generator emits those actions as their own
+  `Resource: "*"` statement and leaves the rest scoped, because splitting is
+  the only way to express both halves correctly.
 - **Actions that should be scoped.** An action with a *required* resource type
   left at `Resource: "*"` is broader than it needs to be. Reported as a
   **warning**.
-- **Statements mixing the two**, with a suggestion to split them so the
-  scopeable half can be narrowed.
 - **Dependent actions.** AWS documents 2,812 of these across 285 services
   (`access-analyzer:StartPolicyGeneration` needs `iam:PassRole`, and so on).
   Nothing in the IAM console surfaces them. One click adds them, in a new

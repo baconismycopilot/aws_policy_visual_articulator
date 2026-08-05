@@ -368,3 +368,47 @@ test("combobox: blurring mid-query restores the committed label", async () => {
     assert.equal(input.value, committed, "an abandoned query is not a selection");
     page.cleanup();
 });
+
+// --- resource-scope splitting --------------------------------------------------
+
+test("generate: wildcard-only actions are split out of a scoped statement", async () => {
+    // eks:CreateCluster has no resource type, so pairing it with cluster ARNs
+    // produces a grant that never applies. The generator splits instead.
+    const context = { partition: "aws", region: "us-east-1", account: "" };
+    const { page } = await boot("generate", context);
+    const { document } = page;
+
+    await pickService(document, "#gen-statements .combobox", "eks");
+
+    for (const name of ["CreateCluster", "CreateAddon", "CreateNodegroup"]) {
+        const box = [...document.querySelectorAll(".action-picker .form-check-input")].find(
+            (input) => input.id.endsWith(`-${name}-0`) || input.id.includes(`-${name}-`),
+        );
+        assert.ok(box, `${name} is in the picker`);
+        change(Object.assign(box, { checked: true }));
+        await settle();
+    }
+
+    const specific = byText(document, "label", "Specific ARNs");
+    change(Object.assign(document.getElementById(specific.getAttribute("for")), { checked: true }));
+    await settle();
+
+    const policy = JSON.parse(document.getElementById("gen-output").textContent);
+    assert.equal(policy.Statement.length, 2, JSON.stringify(policy, null, 2));
+
+    const unscoped = policy.Statement.find((s) => s.Resource === "*");
+    const scoped = policy.Statement.find((s) => s.Resource !== "*");
+
+    assert.ok(unscoped, "a Resource:* statement was emitted");
+    assert.deepEqual([unscoped.Action].flat(), ["eks:CreateCluster"]);
+    assert.ok(
+        ![scoped.Action].flat().includes("eks:CreateCluster"),
+        "CreateCluster is not left among the scoped actions",
+    );
+    assert.match(
+        document.getElementById("gen-findings").textContent,
+        /separate statement/,
+        "the split is explained in the checks panel",
+    );
+    page.cleanup();
+});
