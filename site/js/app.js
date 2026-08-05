@@ -4,7 +4,7 @@
  * Entry point: wires the shared account context and boots both tabs.
  */
 
-import { loadGlobal } from "./data.js";
+import { loadGlobal, loadManifest } from "./data.js";
 import { initBrowse } from "./browse.js";
 import { initGenerate, refreshGenerate } from "./generate.js";
 import { el, option, render } from "./dom.js";
@@ -77,11 +77,12 @@ async function main() {
     loadContext();
 
     try {
-        const globalData = await loadGlobal();
+        const [globalData, manifest] = await Promise.all([loadGlobal(), loadManifest()]);
         wireContextBar(globalData);
 
         document.getElementById("footer-generated").textContent =
-            `Data generated ${globalData.generated_at}.`;
+            `${manifest.n_services} services, ${manifest.n_actions} actions, ` +
+            `generated ${manifest.generated_at}.`;
 
         await Promise.all([initBrowse(), initGenerate(context)]);
     } catch (error) {

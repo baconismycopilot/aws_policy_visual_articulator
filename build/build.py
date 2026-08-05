@@ -260,7 +260,6 @@ def write_site_data(
     services: dict[str, Service],
     policygen: dict,
     manifest: BuildManifest,
-    etag: str | None,
     out: Path,
 ) -> None:
     svc_dir = out / "svc"
@@ -269,8 +268,6 @@ def write_site_data(
         shutil.rmtree(svc_dir)
 
     global_data = GlobalData(
-        generated_at=manifest.generated_at,
-        source_etag=etag,
         condition_operators=sorted(policygen.get("conditionOperators", [])),
         global_condition_keys=sorted(policygen.get("conditionKeys", [])),
         policy_types=policygen.get("policyTypes", {}),
@@ -344,7 +341,8 @@ def main() -> None:
     doc_pages = parse_toc(json.loads(toc_body))
 
     services, manifest = merge(policygen, sar, doc_pages)
-    write_site_data(services, policygen, manifest, etag, args.out)
+    manifest.source_etag = etag
+    write_site_data(services, policygen, manifest, args.out)
 
 
 if __name__ == "__main__":

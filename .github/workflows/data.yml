@@ -44,8 +44,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet -- site/data; then
+          # manifest.json carries the build timestamp, which changes every run.
+          # Including it here would open a content-free PR every week and train
+          # everyone to ignore them.
+          DATA=(site/data ':(exclude)site/data/manifest.json')
+
+          if git diff --quiet -- "${DATA[@]}"; then
             echo "No upstream changes."
+            git checkout -- site/data
             exit 0
           fi
 
