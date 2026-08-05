@@ -14,6 +14,9 @@ const serviceCache = new Map();
 /** @type {object|null} */
 let globalData = null;
 
+/** @type {object|null} */
+let manifest = null;
+
 /** @type {Array<object>|null} */
 let serviceIndex = null;
 
@@ -34,6 +37,18 @@ export async function loadGlobal() {
         globalData = await getJSON(`${DATA_ROOT}/global.json`);
     }
     return globalData;
+}
+
+/**
+ * Build metadata: when the data was generated, and per-source coverage. Kept
+ * out of global.json so that file only changes when AWS does.
+ * @returns {Promise<object>}
+ */
+export async function loadManifest() {
+    if (manifest === null) {
+        manifest = await getJSON(`${DATA_ROOT}/manifest.json`);
+    }
+    return manifest;
 }
 
 /**

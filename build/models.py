@@ -71,8 +71,13 @@ class IndexEntry(BaseModel):
 
 
 class GlobalData(BaseModel):
-    generated_at: str
-    source_etag: str | None = None
+    """Data the page needs.
+
+    Deliberately carries no build timestamp. This file is diffed to decide
+    whether AWS changed anything, so anything that varies per run -- rather
+    than per upstream change -- belongs in the manifest instead.
+    """
+
     condition_operators: list[str] = []
     global_condition_keys: list[str] = []
     policy_types: dict[str, dict] = {}
@@ -80,7 +85,10 @@ class GlobalData(BaseModel):
 
 
 class BuildManifest(BaseModel):
+    """Build metadata. Excluded from change detection."""
+
     generated_at: str
+    source_etag: str | None = None
     n_services: int
     n_actions: int
     services_from_policygen_only: list[str] = []
