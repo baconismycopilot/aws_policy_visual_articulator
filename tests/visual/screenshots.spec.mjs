@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "./fixtures.mjs";
 
 /**
  * Captures the main views as CI artifacts.
