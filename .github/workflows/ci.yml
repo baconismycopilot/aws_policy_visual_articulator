@@ -25,7 +25,7 @@ jobs:
         with:
           enable-cache: true
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
@@ -57,3 +57,36 @@ jobs:
 
       - name: Type check
         run: uv run --group dev pyright
+
+  # Layout, stacking and computed colour — the things jsdom cannot see because
+  # it does no layout. Kept in its own job so the browser download does not
+  # slow the fast suites down.
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Visual tests
+        run: npx playwright test
+
+      # Screenshots of the main views, for a human to glance at. They are not a
+      # pass/fail gate — see tests/visual/screenshots.spec.mjs.
+      - name: Upload screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: visual-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

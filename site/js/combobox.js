@@ -194,15 +194,28 @@ export function combobox({
         drawList();
     });
 
-    input.addEventListener("focus", () => {
-        // Reopening after a selection should offer the whole list again rather
-        // than only what matches the label already in the box.
-        input.select();
+    /**
+     * Show the whole list, highlighting the current selection.
+     *
+     * Reopening after a selection should offer everything again rather than
+     * only what matches the label already sitting in the box.
+     */
+    function openAll({ selectText }) {
+        if (selectText) input.select();
         filter("");
         active = matches.findIndex((i) => i.key === selectedKey);
         setOpen(true);
         drawList();
         scrollActiveIntoView();
+    }
+
+    input.addEventListener("focus", () => openAll({ selectText: true }));
+
+    // Committing a choice keeps focus on the input (the option's mousedown
+    // preventDefault stops the blur), so a second click fires no focus event.
+    // Without this the dropdown cannot be reopened without clicking away first.
+    input.addEventListener("click", () => {
+        if (!open) openAll({ selectText: false });
     });
 
     input.addEventListener("blur", () => {

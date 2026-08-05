@@ -325,14 +325,11 @@ function drawActionSection(statement) {
     local.filter ??= "";
     local.levels ??= new Set();
 
+    refs.actionCount = el("span", { className: "badge text-bg-secondary" });
+
     const header = el("div", { className: "d-flex align-items-center gap-2 mb-2" }, [
         el("label", { className: "form-label mb-0", textContent: "Actions" }),
-        el("span", {
-            className: "badge text-bg-secondary",
-            textContent: statement.wildcardAction
-                ? "all"
-                : `${statement.actions.length} selected`,
-        }),
+        refs.actionCount,
         el("div", { className: "form-check form-switch ms-auto" }, [
             el("input", {
                 className: "form-check-input",
@@ -359,6 +356,7 @@ function drawActionSection(statement) {
             className: "text-secondary small",
             textContent: `Granting all ${service.actions.length} actions in this service.`,
         }));
+        drawActionCount(statement);
         return;
     }
 
@@ -391,7 +389,18 @@ function drawActionSection(statement) {
     refs.picker = el("div", { className: "action-picker" });
 
     render(refs.actions, header, search, levels, refs.picker, selectionTools(statement));
+    drawActionCount(statement);
     drawPicker(statement);
+}
+
+/** Keep the "N selected" badge in step with the checkboxes. */
+function drawActionCount(statement) {
+    const badge = uiState.get(statement)?.refs?.actionCount;
+    if (!badge) return;
+
+    badge.textContent = statement.wildcardAction
+        ? "all"
+        : `${statement.actions.length} selected`;
 }
 
 function selectionTools(statement) {
@@ -460,6 +469,9 @@ function drawPicker(statement) {
                     // Available resource types depend on the selection, so the
                     // resource section must follow. The picker itself is left
                     // alone to preserve scroll position.
+                    // The picker is deliberately not redrawn (it would lose
+                    // scroll position), so the count badge is updated by hand.
+                    drawActionCount(statement);
                     drawResourceSection(statement, POLICY_TYPES[state.policyType]);
                     drawConditionSection(statement);
                     drawOutput();
