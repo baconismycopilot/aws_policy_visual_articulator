@@ -16,6 +16,7 @@ import {
     emptyStatement,
     hasAccessLevel,
     mustScope,
+    resolveStatements,
     resourceTypesFor,
     validate,
 } from "../site/js/policy.js";
@@ -210,21 +211,25 @@ test("wildcard actions render as service:*", () => {
 const levels = (findings, level) => findings.filter((f) => f.level === level);
 const messages = (findings) => findings.map((f) => f.message).join(" | ");
 
-test("scoping a wildcard-only action is reported as an error", () => {
-    const findings = validate("IAMPolicy", [
-        statement({
-            actions: [WILDCARD_ONLY.name],
-            anyResource: false,
-            resources: [{
-                resourceType: "bucket",
-                template: "arn:${Partition}:s3:::${BucketName}",
-                values: { BucketName: "my-bucket" },
-            }],
-        }),
-    ], getService);
+test("an all-wildcard-only statement is emitted with Resource:* and says so", () => {
+    const stmt = statement({
+        actions: [WILDCARD_ONLY.name],
+        anyResource: false,
+        resources: [{
+            resourceType: "bucket",
+            template: "arn:${Partition}:s3:::${BucketName}",
+            values: { BucketName: "my-bucket" },
+        }],
+    });
 
+    // The ARNs cannot apply to any of these actions, so they are dropped.
+    const policy = buildPolicy("IAMPolicy", [stmt], CONTEXT, getService);
+    assert.equal(policy.Statement.length, 1);
+    assert.equal(policy.Statement[0].Resource, "*");
+
+    const findings = validate("IAMPolicy", [stmt], getService);
     assert.ok(
-        levels(findings, "error").some((f) => f.message.includes("cannot be scoped")),
+        levels(findings, "warning").some((f) => f.message.includes("not used")),
         messages(findings),
     );
 });
@@ -241,18 +246,89 @@ test("a scopeable action left at Resource:* is a warning, not an error", () => {
     );
 });
 
-test("mixing wildcard-only and scopeable actions suggests a split", () => {
-    const findings = validate("IAMPolicy", [
-        statement({
-            actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
-            anyResource: true,
-        }),
-    ], getService);
+test("a mixed statement is split, and the split is reported", () => {
+    const stmt = statement({
+        actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
+        anyResource: false,
+        resources: [{
+            resourceType: "bucket",
+            template: "arn:${Partition}:s3:::${BucketName}",
+            values: { BucketName: "my-bucket" },
+        }],
+    });
 
+    const policy = buildPolicy("IAMPolicy", [stmt], CONTEXT, getService);
+    assert.equal(policy.Statement.length, 2, JSON.stringify(policy, null, 2));
+
+    const [scoped, unscoped] = policy.Statement;
+    assert.equal(scoped.Resource, "arn:aws:s3:::my-bucket");
+    assert.equal([scoped.Action].flat().join(), `s3:${REQUIRES_RESOURCE.name}`);
+    assert.equal(unscoped.Resource, "*");
+    assert.equal([unscoped.Action].flat().join(), `s3:${WILDCARD_ONLY.name}`);
+
+    const findings = validate("IAMPolicy", [stmt], getService);
     assert.ok(
-        levels(findings, "info").some((f) => f.message.includes("two statements")),
+        levels(findings, "info").some((f) => f.message.includes("separate statement")),
         messages(findings),
     );
+});
+
+test("splitting is skipped when the statement is already unscoped", () => {
+    const stmt = statement({
+        actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
+        anyResource: true,
+    });
+
+    const policy = buildPolicy("IAMPolicy", [stmt], CONTEXT, getService);
+    assert.equal(policy.Statement.length, 1, "Resource:* needs no split");
+});
+
+test("splitting is skipped for a service:* wildcard action", () => {
+    const stmt = statement({ wildcardAction: true, anyResource: false });
+    const policy = buildPolicy("IAMPolicy", [stmt], CONTEXT, getService);
+
+    assert.equal(policy.Statement.length, 1);
+    assert.equal(policy.Statement[0].Action, "s3:*");
+});
+
+test("the split statement derives its Sid from the original", () => {
+    const stmt = statement({
+        sid: "ClusterAdmin",
+        actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
+        anyResource: false,
+        resources: [{
+            resourceType: "bucket",
+            template: "arn:${Partition}:s3:::${BucketName}",
+            values: { BucketName: "b" },
+        }],
+    });
+
+    const [scoped, unscoped] = buildPolicy("IAMPolicy", [stmt], CONTEXT, getService).Statement;
+
+    assert.equal(scoped.Sid, "ClusterAdmin", "the scoped half keeps the original Sid");
+    assert.equal(unscoped.Sid, "ClusterAdminAnyResource");
+});
+
+test("no service lookup means no splitting", () => {
+    // buildPolicy is used without a lookup in a few places; it must stay inert.
+    const stmt = statement({
+        actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
+        anyResource: false,
+        resources: [{ resourceType: "bucket", template: "arn:${Partition}:s3:::x", values: {} }],
+    });
+
+    assert.equal(buildPolicy("IAMPolicy", [stmt], CONTEXT).Statement.length, 1);
+});
+
+test("resolveStatements reports the real statement count", () => {
+    const stmt = statement({
+        actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
+        anyResource: false,
+        resources: [{ resourceType: "bucket", template: "arn:${Partition}:s3:::x", values: {} }],
+    });
+
+    assert.equal(resolveStatements([stmt], getService).length, 2);
+    assert.equal(resolveStatements([stmt], undefined).length, 1);
 });
 
 test("permissions-management actions are flagged", () => {

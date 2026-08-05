@@ -157,6 +157,64 @@ export function dependentActionsFor(service, actionNames) {
     return [...missing].sort();
 }
 
+// --- resource-scope splitting -------------------------------------------------
+
+/** Appended to the Sid of the statement carrying the wildcard-only actions. */
+const UNSCOPED_SID_SUFFIX = "AnyResource";
+
+/**
+ * Split a statement whose actions disagree about resource scoping.
+ *
+ * An action with no resource type only ever matches `Resource: "*"`. Emitting
+ * it alongside specific ARNs produces a grant that silently never applies --
+ * IAM accepts the policy, the permission just never takes effect. Splitting is
+ * the only way to express both halves correctly, so the generator does it
+ * rather than handing over a document it knows is dead.
+ *
+ * @returns {Array<object>} one statement, or two
+ */
+function splitByScope(statement, getService) {
+    // Nothing to split: already unscoped, or granting the whole service.
+    if (statement.anyResource || statement.wildcardAction) return [statement];
+
+    const service = getService?.(statement.servicePrefix);
+    if (!service) return [statement];
+
+    const selected = new Set(statement.actions);
+    const chosen = (service.actions || []).filter((a) => selected.has(a.name));
+    const wildcardOnly = chosen.filter((a) => !canScope(a));
+
+    if (wildcardOnly.length === 0) return [statement];
+
+    const unscoped = {
+        ...statement,
+        actions: wildcardOnly.map((a) => a.name),
+        anyResource: true,
+        resources: [],
+    };
+
+    const scopeable = chosen.filter((a) => canScope(a));
+
+    // Every action is wildcard-only, so the ARNs cannot apply to anything.
+    if (scopeable.length === 0) return [unscoped];
+
+    return [
+        // The scoped half keeps the original position and Sid.
+        { ...statement, actions: scopeable.map((a) => a.name) },
+        { ...unscoped, sid: statement.sid ? `${statement.sid}${UNSCOPED_SID_SUFFIX}` : "" },
+    ];
+}
+
+/**
+ * The statements as they will actually be emitted.
+ *
+ * Exported so the UI can tell the user how many statements a policy will have
+ * before it renders one.
+ */
+export function resolveStatements(statements, getService) {
+    return statements.flatMap((statement) => splitByScope(statement, getService));
+}
+
 // --- document construction ----------------------------------------------------
 
 function sanitizeSid(sid) {
@@ -226,12 +284,14 @@ function buildResources(statement, context) {
  * @param {string} policyTypeKey
  * @param {Array<object>} statements
  * @param {object} context  {partition, region, account}
+ * @param {(prefix: string) => object|undefined} [getService]  omit to skip
+ *        resource-scope splitting
  * @returns {object}
  */
-export function buildPolicy(policyTypeKey, statements, context) {
+export function buildPolicy(policyTypeKey, statements, context, getService) {
     const spec = POLICY_TYPES[policyTypeKey] || POLICY_TYPES.IAMPolicy;
 
-    const rendered = statements.map((statement) => {
+    const rendered = resolveStatements(statements, getService).map((statement) => {
         /** @type {Record<string, unknown>} */
         const out = {};
 
@@ -326,31 +386,36 @@ export function validate(policyTypeKey, statements, getService) {
         const chosen = (service.actions || []).filter((a) => selected.has(a.name));
 
         const wildcardOnly = chosen.filter((a) => !canScope(a));
-        const scopeable = chosen.filter((a) => mustScope(a));
+        const anyScopeable = chosen.filter((a) => canScope(a));
+        const shouldScope = chosen.filter((a) => mustScope(a));
 
+        // buildPolicy splits these apart rather than emitting a dead grant, so
+        // these findings describe what it did, not a problem left for the user.
         if (!statement.anyResource && wildcardOnly.length > 0) {
-            add(
-                "error",
-                `${listActions(wildcardOnly)} cannot be scoped to a resource ` +
-                    `ARN — ${wildcardOnly.length === 1 ? "it" : "they"} only ` +
-                    'match Resource: "*", so this statement grants nothing.',
-            );
+            if (anyScopeable.length === 0) {
+                add(
+                    "warning",
+                    `${listActions(wildcardOnly)} ` +
+                        `${verb(wildcardOnly, "has", "have")} no resource-level ` +
+                        'permissions, so this statement is emitted with ' +
+                        'Resource: "*" and the ARNs above are not used.',
+                );
+            } else {
+                add(
+                    "info",
+                    `${listActions(wildcardOnly)} only ` +
+                        `${verb(wildcardOnly, "matches", "match")} Resource: "*", ` +
+                        `so ${verb(wildcardOnly, "it was", "they were")} split into ` +
+                        "a separate statement. The rest keep the ARNs you specified.",
+                );
+            }
         }
 
-        if (statement.anyResource && scopeable.length > 0 && !statement.wildcardAction) {
+        if (statement.anyResource && shouldScope.length > 0 && !statement.wildcardAction) {
             add(
                 "warning",
-                `${listActions(scopeable)} ${verb(scopeable, "supports", "support")} ` +
+                `${listActions(shouldScope)} ${verb(shouldScope, "supports", "support")} ` +
                     'resource-level permissions — Resource: "*" is broader than necessary.',
-            );
-        }
-
-        if (wildcardOnly.length > 0 && scopeable.length > 0) {
-            add(
-                "info",
-                "This statement mixes actions that require \"*\" with actions " +
-                    "that can be scoped. Splitting them into two statements lets " +
-                    "you narrow the scopeable half.",
             );
         }
 
