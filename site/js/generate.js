@@ -19,6 +19,7 @@ import {
     validate,
 } from "./policy.js";
 import { accessLevelBadge, accessLevelBadges, el, option, render } from "./dom.js";
+import { combobox } from "./combobox.js";
 
 /** Rendering every action of a large service (ec2 has ~1,800) is sluggish. */
 const MAX_PICKER_ROWS = 300;
@@ -197,11 +198,22 @@ function effectToggle(statement) {
 }
 
 function serviceRow(statement, spec) {
-    const select = el("select", {
-        className: "form-select",
-        disabled: Boolean(spec.servicePrefix),
-        onchange: async (event) => {
-            statement.servicePrefix = event.target.value;
+    const mount = el("div", {});
+    // Resource-based policy types are pinned to their own service, so the
+    // picker is shown filled but locked rather than hidden.
+    const pinned = Boolean(spec.servicePrefix);
+
+    combobox({
+        mount,
+        items: serviceIndex.map((entry) => ({
+            key: entry.prefix,
+            label: `${entry.service_name} (${entry.prefix})`,
+        })),
+        placeholder: `Search ${serviceIndex.length} services — name or IAM prefix`,
+        value: statement.servicePrefix || null,
+        disabled: pinned,
+        onSelect: async (prefix) => {
+            statement.servicePrefix = prefix || "";
             statement.actions = [];
             statement.wildcardAction = false;
             statement.resources = [];
@@ -209,20 +221,19 @@ function serviceRow(statement, spec) {
             if (statement.servicePrefix) await loadService(statement.servicePrefix);
             drawStatements();
         },
-    }, [
-        option("", "Select a service…"),
-        ...serviceIndex.map((entry) =>
-            option(
-                entry.prefix,
-                `${entry.service_name} (${entry.prefix})`,
-                entry.prefix === statement.servicePrefix,
-            ),
-        ),
-    ]);
+    });
 
     return el("div", {}, [
-        el("label", { className: "form-label", textContent: "Service" }),
-        select,
+        el("label", { className: "form-label" }, [
+            el("span", { textContent: "Service" }),
+            pinned
+                ? el("span", {
+                      className: "text-secondary small ms-2",
+                      textContent: `fixed by ${spec.name}`,
+                  })
+                : null,
+        ].filter(Boolean)),
+        mount,
     ]);
 }
 

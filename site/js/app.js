@@ -5,7 +5,7 @@
  */
 
 import { loadGlobal } from "./data.js";
-import { initBrowse, refreshBrowse } from "./browse.js";
+import { initBrowse } from "./browse.js";
 import { initGenerate, refreshGenerate } from "./generate.js";
 import { el, option, render } from "./dom.js";
 
@@ -51,7 +51,6 @@ function wireContextBar(globalData) {
         context.region = region.value;
         context.account = account.value;
         saveContext();
-        refreshBrowse();
         refreshGenerate();
     };
 
@@ -84,7 +83,7 @@ async function main() {
         document.getElementById("footer-generated").textContent =
             `Data generated ${globalData.generated_at}.`;
 
-        await Promise.all([initBrowse(context), initGenerate(context)]);
+        await Promise.all([initBrowse(), initGenerate(context)]);
     } catch (error) {
         console.error(error);
         showFatal(error);

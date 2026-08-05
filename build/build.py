@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
@@ -49,6 +50,11 @@ SAR_URL = (
     "https://raw.githubusercontent.com/iann0036/iam-dataset"
     "/refs/heads/main/aws/iam_definition.json"
 )
+# The reference's own table of contents. It is the only authoritative map from
+# IAM prefix to documentation page: the page stem usually matches the prefix,
+# but 62 services disagree, and the old name-derived scheme
+# (list_amazons3.html) now 302s to the index.
+TOC_URL = "https://docs.aws.amazon.com/service-authorization/latest/reference/toc-contents.json"
 
 ROOT = Path(__file__).parent.parent
 CACHE_DIR = Path(__file__).parent / ".cache"
@@ -86,6 +92,30 @@ def parse_policygen(body: str) -> dict:
     return json.loads(body[start:])
 
 
+def parse_toc(toc: dict) -> dict[str, str]:
+    """Map IAM prefix -> documentation page stem.
+
+    TOC entries look like ``{"title": "Amazon S3 (s3)", "href": "list_s3.html"}``
+    and nest arbitrarily deep.
+    """
+    pages: dict[str, str] = {}
+
+    def walk(nodes: list[dict]) -> None:
+        for node in nodes:
+            title = node.get("title", "")
+            href = node.get("href", "")
+
+            match = re.search(r"\(([^)]+)\)$", title)
+            if href.startswith("list_") and match:
+                pages[match.group(1).strip()] = href.removesuffix(".html")
+
+            walk(node.get("contents", []))
+
+    walk(toc.get("contents", []))
+
+    return pages
+
+
 def _access_levels(raw: str) -> list[str]:
     """Split the upstream access level string into its parts.
 
@@ -113,13 +143,16 @@ def _resource_type_ref(raw: dict) -> ResourceTypeRef:
     )
 
 
-def merge(policygen: dict, sar: list[dict]) -> tuple[dict[str, Service], BuildManifest]:
+def merge(
+    policygen: dict, sar: list[dict], doc_pages: dict[str, str] | None = None
+) -> tuple[dict[str, Service], BuildManifest]:
     """Union the two sources by service prefix.
 
     A union, not an intersection: policies.js carries ~473 services and the SAR
     scrape ~418, and each has entries the other lacks. Taking only the overlap
     (as the original app did) silently drops dozens of services.
     """
+    doc_pages = doc_pages or {}
     services: dict[str, Service] = {}
 
     # SAR first -- it has the richer per-action detail.
@@ -199,6 +232,7 @@ def merge(policygen: dict, sar: list[dict]) -> tuple[dict[str, Service], BuildMa
                 svc.actions.append(Action(name=action_name))
 
     for svc in services.values():
+        svc.doc_page = doc_pages.get(svc.prefix, "")
         svc.actions.sort(key=lambda a: a.name)
         svc.resources.sort(key=lambda r: r.resource)
         svc.conditions.sort(key=lambda c: c.condition)
@@ -269,6 +303,13 @@ def write_site_data(
         f"index.json {index_bytes / 1024:.0f} KB, "
         f"shards {shard_bytes / 1024 / 1024:.1f} MB total"
     )
+    without_docs = [s.prefix for s in services.values() if not s.doc_page]
+    if without_docs:
+        logger.warning(
+            f"{len(without_docs)} services have no documentation page: "
+            f"{', '.join(sorted(without_docs)[:5])}"
+        )
+
     if manifest.services_from_policygen_only:
         logger.info(
             f"{len(manifest.services_from_policygen_only)} services from "
@@ -296,11 +337,13 @@ def main() -> None:
 
     policygen_body, etag = _fetch(POLICYGEN_URL, "policies.js", args.cache)
     sar_body, _ = _fetch(SAR_URL, "iam_definition.json", args.cache)
+    toc_body, _ = _fetch(TOC_URL, "toc-contents.json", args.cache)
 
     policygen = parse_policygen(policygen_body)
     sar = json.loads(sar_body)
+    doc_pages = parse_toc(json.loads(toc_body))
 
-    services, manifest = merge(policygen, sar)
+    services, manifest = merge(policygen, sar, doc_pages)
     write_site_data(services, policygen, manifest, etag, args.out)
 
 

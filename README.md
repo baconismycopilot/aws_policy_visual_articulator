@@ -4,8 +4,9 @@ Browse every AWS IAM action and build policies from them. A static site — no
 server, no database, no build tooling beyond a Python script that refreshes the
 data.
 
-- **Browse** — pick a service, see its ARN formats, every action with its access
-  levels and resource-scoping requirements, and its condition keys.
+- **Browse** — find a service by name or IAM prefix, then read every action with
+  its access levels, resource-scoping requirements, and a link straight to its
+  entry in the Service Authorization Reference.
 - **Generate** — build IAM identity policies, resource-based policies (S3, SQS,
   SNS, VPC endpoint), and role trust policies, with validation driven by the
   metadata AWS publishes.
@@ -66,13 +67,15 @@ site/                 the deployable
     data.js           shard loading and caching
     arn.js            ARN template parsing            (DOM-free)
     policy.js         document construction, checks   (DOM-free)
+    combobox.js       fuzzy service picker            (scoring is DOM-free)
     browse.js         Browse tab
     generate.js       Generate tab
     dom.js            element helpers
   data/               generated — see "Refreshing"
 tests/
-  test_build.py       merge logic
+  test_build.py       merge logic and TOC parsing
   policy.test.mjs     policy engine, against real shards
+  combobox.test.mjs   fuzzy ranking, against the real service index
 ```
 
 `policy.js` and `arn.js` hold every IAM semantic and deliberately touch no DOM,
@@ -118,3 +121,8 @@ Two upstream quirks the build normalizes:
   treating it as a scalar silently drops most permission-management actions.
 - **A trailing `*` on a resource type means required** (`object*`). The build
   strips it into a `required` boolean.
+- **Documentation pages are not derivable from the prefix.** 62 services
+  disagree (`airflow` → `list_mwaa`, `aps` → `list_amp`), and the older
+  name-derived scheme (`list_amazons3.html`) now redirects to the index. The
+  build reads the reference's own `toc-contents.json` and stores the page stem
+  per service, which covers 453/453.

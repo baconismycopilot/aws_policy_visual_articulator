@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from build.build import merge, parse_policygen
+from build.build import merge, parse_policygen, parse_toc
 
 
 @pytest.fixture
@@ -190,3 +190,47 @@ def test_output_is_json_serializable(policygen, sar):
 
     json.dumps({p: s.model_dump() for p, s in services.items()})
     json.dumps(manifest.model_dump())
+
+
+@pytest.fixture
+def toc() -> dict:
+    return {
+        "contents": [
+            {
+                "title": "Reference",
+                "href": "reference.html",
+                "contents": [
+                    {"title": "Amazon S3 (s3)", "href": "list_s3.html"},
+                    # The page stem does not always match the prefix.
+                    {"title": "Amazon MWAA (airflow)", "href": "list_mwaa.html"},
+                    # Non-service pages must be ignored.
+                    {"title": "Condition keys", "href": "reference_policies.html"},
+                ],
+            }
+        ]
+    }
+
+
+def test_parse_toc_maps_prefix_to_page_stem(toc):
+    pages = parse_toc(toc)
+
+    assert pages == {"s3": "list_s3", "airflow": "list_mwaa"}
+
+
+def test_parse_toc_ignores_non_service_pages(toc):
+    assert "Condition keys" not in parse_toc(toc)
+    assert all(v.startswith("list_") for v in parse_toc(toc).values())
+
+
+def test_doc_page_is_attached_to_services(policygen, sar, toc):
+    services, _ = merge(policygen, sar, parse_toc(toc))
+
+    assert services["s3"].doc_page == "list_s3"
+    # A service with no reference page must not invent one.
+    assert services["saronly"].doc_page == ""
+
+
+def test_merge_without_toc_leaves_doc_page_empty(policygen, sar):
+    services, _ = merge(policygen, sar)
+
+    assert all(s.doc_page == "" for s in services.values())

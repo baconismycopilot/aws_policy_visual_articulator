@@ -38,7 +38,7 @@ jobs:
       - name: Run tests
         run: |
           uv run --group dev pytest
-          node --test tests/policy.test.mjs
+          node --test tests/*.test.mjs
 
       - name: Open a PR if the data changed
         env:
