@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "bootstrap": "5.3.6",
     "jsdom": "^26.0.0"
   }
 }

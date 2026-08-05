@@ -29,7 +29,17 @@ const TYPES = {
 
 const server = createServer(async (req, res) => {
     // Strip the query string, then normalize away any "../" traversal.
-    const path = decodeURIComponent(req.url.split("?")[0]);
+    // A stray "%" makes decodeURIComponent throw, and an unhandled rejection
+    // in here would take the whole server down mid-run — which surfaces as an
+    // unrelated test timing out rather than as anything readable.
+    let path;
+    try {
+        path = decodeURIComponent(req.url.split("?")[0]);
+    } catch {
+        res.writeHead(400, { "content-type": "text/plain" });
+        res.end("bad request");
+        return;
+    }
     const relative = normalize(path).replace(/^(\.\.[/\\])+/, "");
     let file = join(ROOT, relative);
 

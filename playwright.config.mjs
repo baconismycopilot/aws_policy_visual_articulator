@@ -8,6 +8,12 @@ import { defineConfig, devices } from "@playwright/test";
  * Specs live in tests/visual/ so `node --test tests/*.test.mjs` does not try
  * to run them.
  */
+// tests/visual/server.mjs honours PORT, so the URLs below have to read the
+// same value — otherwise an exported PORT (the Makefile advertises one) binds
+// the server elsewhere and Playwright waits out its 60s timeout on 8081.
+const PORT = Number(process.env.PORT || 8081);
+const ORIGIN = `http://127.0.0.1:${PORT}`;
+
 export default defineConfig({
     testDir: "./tests/visual",
     testMatch: "**/*.spec.mjs",
@@ -17,7 +23,7 @@ export default defineConfig({
     reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
 
     use: {
-        baseURL: "http://127.0.0.1:8081",
+        baseURL: ORIGIN,
         trace: "on-first-retry",
         screenshot: "only-on-failure",
     },
@@ -29,7 +35,7 @@ export default defineConfig({
 
     webServer: {
         command: "node tests/visual/server.mjs",
-        url: "http://127.0.0.1:8081",
+        url: ORIGIN,
         reuseExistingServer: !process.env.CI,
         stdout: "ignore",
     },
