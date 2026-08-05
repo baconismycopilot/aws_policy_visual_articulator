@@ -1,15 +1,30 @@
 [project]
-name = "aws-policy-visualizer"
-version = "0.1.0"
-description = "Visualize IAM Policies"
+name = "aws-policy-visual-articulator"
+version = "0.2.0"
+description = "Browse and generate AWS IAM policies from a static site"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "fastapi>=0.115.12",
   "httpx>=0.28.1",
-  "jinja2>=3.1.6",
   "loguru>=0.7.3",
-  "pydantic-settings>=2.9.1",
-  "pyyaml>=6.0.3",
-  "uvicorn>=0.34.2",
+  "pydantic>=2.11.0",
 ]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.0",
+  "ruff>=0.9.0",
+  "pyright>=1.1.390",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.pyright]
+include = ["build", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"

@@ -1,0 +1,88 @@
+name: Refresh IAM data and deploy
+
+on:
+  schedule:
+    # Mondays 06:00 UTC. The SAR scrape upstream updates most weekdays; weekly
+    # keeps the diff readable without missing much.
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Scheduled refresh. main is protected, so this opens a PR rather than
+  # pushing -- github-actions[bot] is not an admin and cannot bypass.
+  refresh:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Rebuild site data
+        run: uv run python -m build.build
+
+      - name: Run tests
+        run: |
+          uv run --group dev pytest
+          node --test tests/policy.test.mjs
+
+      - name: Open a PR if the data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- site/data; then
+            echo "No upstream changes."
+            exit 0
+          fi
+
+          BRANCH="data-refresh"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add site/data
+          git commit -m "Refresh IAM data ($(date -u +%Y-%m-%d))"
+          git push --force origin "$BRANCH"
+
+          # Reuse the open PR if there is one, so weekly runs do not pile up.
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create \
+              --head "$BRANCH" \
+              --title "Refresh IAM data" \
+              --body "Automated rebuild from \`policies.js\` and the Service Authorization Reference.
+
+          The diff below is what AWS changed upstream. Merging redeploys the site."
+          fi
+
+  # Deploys whatever is committed on main. Deliberately does not rebuild --
+  # the committed shards are the source of truth for what is live.
+  deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

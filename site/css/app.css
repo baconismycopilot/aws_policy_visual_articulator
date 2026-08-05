@@ -1,0 +1,91 @@
+.context-bar input {
+    max-width: 10rem;
+}
+
+.sticky-panel {
+    position: sticky;
+    top: 1rem;
+}
+
+.policy-output {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    padding: 0.75rem;
+    margin: 0;
+    max-height: 32rem;
+    overflow: auto;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    tab-size: 2;
+}
+
+/* Action pickers get long; cap them and scroll rather than pushing the
+   output panel off-screen. */
+.action-picker {
+    max-height: 18rem;
+    overflow-y: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    padding: 0.5rem;
+}
+
+.action-picker .form-check {
+    margin-bottom: 0.125rem;
+}
+
+.action-picker label {
+    cursor: pointer;
+}
+
+.access-level {
+    font-size: 0.75rem;
+    padding: 0.15em 0.45em;
+}
+
+/* Access levels are the primary way to read a permission set at a glance,
+   so they get consistent colours everywhere they appear. */
+.level-Read        { background-color: #1f6f8b; }
+.level-List        { background-color: #3f6212; }
+.level-Write       { background-color: #9a3412; }
+.level-Tagging     { background-color: #4c1d95; }
+.level-Permissions { background-color: #9f1239; }
+.level-Unknown     { background-color: #44403c; }
+
+.finding {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid;
+    border-radius: 0.25rem;
+    background: var(--bs-tertiary-bg);
+}
+
+.finding-error   { border-color: var(--bs-danger); }
+.finding-warning { border-color: var(--bs-warning); }
+.finding-info    { border-color: var(--bs-info); }
+
+.statement-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.arn-segment {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8125rem;
+}
+
+.arn-preview {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+    word-break: break-all;
+}
+
+td.description {
+    max-width: 40rem;
+}
+
+.table > :not(caption) > * > * {
+    padding: 0.35rem 0.5rem;
+}
