@@ -72,13 +72,23 @@ function subsequenceScore(haystack, needle) {
  * @param {Array<{key: string, label: string}>} options.items
  * @param {string} options.placeholder
  * @param {(key: string|null) => void} options.onSelect
+ * @param {string|null} [options.value]   initially selected key
+ * @param {boolean} [options.disabled]    render read-only, e.g. when a policy
+ *                                        type pins the service
  * @returns {{setValue: (key: string|null) => void, focus: () => void}}
  */
-export function combobox({ mount, items, placeholder = "Search…", onSelect }) {
+export function combobox({
+    mount,
+    items,
+    placeholder = "Search…",
+    onSelect,
+    value = null,
+    disabled = false,
+}) {
     let matches = items;
     let active = -1;
     let open = false;
-    let selectedKey = null;
+    let selectedKey = value;
 
     const input = el("input", {
         className: "form-select combobox-input",
@@ -89,6 +99,9 @@ export function combobox({ mount, items, placeholder = "Search…", onSelect }) 
         autocomplete: "off",
         "aria-expanded": "false",
         "aria-autocomplete": "list",
+        // A disabled input fires no focus, input or key events, so the dropdown
+        // handlers below need no separate guard.
+        disabled,
     });
 
     const list = el("ul", { className: "combobox-list d-none", role: "listbox" });
@@ -104,6 +117,11 @@ export function combobox({ mount, items, placeholder = "Search…", onSelect }) 
     function labelFor(key) {
         const item = items.find((i) => i.key === key);
         return item ? item.label : "";
+    }
+
+    if (selectedKey) {
+        input.value = labelFor(selectedKey);
+        clear.classList.toggle("d-none", disabled);
     }
 
     function setOpen(next) {

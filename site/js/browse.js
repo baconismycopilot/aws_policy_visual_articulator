@@ -32,7 +32,7 @@ export async function initBrowse() {
 
     ui.combo = combobox({
         mount: document.getElementById("browse-service"),
-        placeholder: "Search 453 services — name or IAM prefix",
+        placeholder: `Search ${index.length} services — name or IAM prefix`,
         items: index.map((entry) => ({
             key: entry.prefix,
             label: `${entry.service_name} (${entry.prefix})`,
