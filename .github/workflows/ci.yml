@@ -1,0 +1,59 @@
+name: CI
+
+# Separate from data.yml deliberately: that workflow needs write access to open
+# refresh PRs and deploy Pages, and serializes on the `pages` concurrency group.
+# Gating PRs should need neither, so this runs read-only and in parallel.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install front-end test dependencies
+        run: npm ci
+
+      - name: Build tests
+        run: uv run --group dev pytest
+
+      # Both JS suites read site/data/, so a shard whose shape drifted from what
+      # the frontend expects fails here rather than in the browser.
+      - name: Front-end tests
+        run: node --test tests/*.test.mjs
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Format check
+        run: uv run --group dev ruff format --check build/ tests/
+
+      - name: Lint
+        run: uv run --group dev ruff check build/ tests/
+
+      - name: Type check
+        run: uv run --group dev pyright
