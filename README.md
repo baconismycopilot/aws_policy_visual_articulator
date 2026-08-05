@@ -80,12 +80,14 @@ so `node --test` exercises them directly against the generated shards.
 
 ## Refreshing
 
-`.github/workflows/data.yml` rebuilds weekly (Mondays 06:00 UTC), commits
-`site/data/` only when it changed, and deploys to GitHub Pages. Committing the
-shards is deliberate — the weekly diff is a readable log of what AWS added,
-removed, or reclassified.
+`.github/workflows/data.yml` rebuilds weekly (Mondays 06:00 UTC) and **opens a
+PR** when the data changed — `main` is protected, so the bot cannot push to it
+directly. Merging that PR redeploys the site.
 
-To enable it: **Settings → Pages → Source: GitHub Actions**.
+The deploy job ships whatever is committed on `main` and deliberately does not
+rebuild, so what is live always matches what is in the repo. Committing the
+shards is deliberate too — the weekly diff is a readable log of what AWS added,
+removed, or reclassified.
 
 Locally:
 
