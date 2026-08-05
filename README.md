@@ -33,6 +33,9 @@ Neither is complete on its own — the build takes their **union**, not their
 intersection. At the last run that was 453 services: 40 known only to
 policies.js, 5 only to the SAR.
 
+Everything under `site/data/` is derived from those sources and carries their
+terms, not this project's — see [NOTICE](NOTICE).
+
 ## What the generator checks
 
 These come straight out of the dataset, and are the reason this is more useful
@@ -126,3 +129,15 @@ Two upstream quirks the build normalizes:
   name-derived scheme (`list_amazons3.html`) now redirects to the index. The
   build reads the reference's own `toc-contents.json` and stores the page stem
   per service, which covers 453/453.
+
+## License
+
+[MIT](LICENSE) for this project's own code.
+
+The generated data under `site/data/` is not original to this project. It
+derives from [iam-dataset](https://github.com/iann0036/iam-dataset) (MIT,
+© 2021 Ian Mckay) and from data published by AWS, whose terms govern it.
+[NOTICE](NOTICE) has the details.
+
+Not affiliated with, endorsed by, or sponsored by Amazon Web Services.
+Generated policies come with no warranty — read them before you apply them.

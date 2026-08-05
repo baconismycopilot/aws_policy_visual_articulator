@@ -1,0 +1,73 @@
+AWS Policy Visual Articulator
+Copyright (c) 2026 baconismycopilot
+
+This project is licensed under the MIT License. See LICENSE.
+
+The generated files under site/data/ are not original to this project. They are
+built by build/build.py from the third-party sources below, and are governed by
+those sources' terms rather than by this project's license.
+
+--------------------------------------------------------------------------------
+Service Authorization Reference data
+--------------------------------------------------------------------------------
+
+Per-action access levels, resource types, dependent actions, and condition keys
+are derived from the iam-dataset project, used under the MIT License:
+
+    https://github.com/iann0036/iam-dataset
+
+    MIT License
+
+    Copyright (c) 2021 Ian Mckay
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to
+    deal in the Software without restriction, including without limitation the
+    rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+Amazon Web Services data
+--------------------------------------------------------------------------------
+
+ARN formats, condition operators, global condition keys, and policy types are
+retrieved from endpoints published by Amazon Web Services:
+
+    https://awspolicygen.s3.amazonaws.com/js/policies.js
+    https://docs.aws.amazon.com/service-authorization/latest/reference/toc-contents.json
+
+Amazon Web Services retains all rights in that content. It is reproduced here
+for reference, and is subject to the AWS Site Terms:
+
+    https://aws.amazon.com/terms/
+
+--------------------------------------------------------------------------------
+Bundled at runtime
+--------------------------------------------------------------------------------
+
+The site loads Bootstrap 5.3.6 from a CDN, used under the MIT License:
+
+    https://github.com/twbs/bootstrap
+
+--------------------------------------------------------------------------------
+Trademarks
+--------------------------------------------------------------------------------
+
+Amazon Web Services, AWS, and the names of AWS services are trademarks of
+Amazon.com, Inc. or its affiliates. This project is an independent work and is
+neither affiliated with, endorsed by, nor sponsored by Amazon Web Services.
+
+The policies this tool generates are provided without warranty. Review them
+before applying them to a live account.

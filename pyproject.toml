@@ -4,6 +4,8 @@ version = "0.2.0"
 description = "Browse and generate AWS IAM policies from a static site"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
 dependencies = [
   "httpx>=0.28.1",
   "loguru>=0.7.3",
