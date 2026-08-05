@@ -44,11 +44,14 @@ test: test-py test-js
 test-py:
 	uv run --group dev pytest
 
-# policy.js and arn.js are DOM-free so the policy engine can be tested without
-# a browser. The rendering modules are not covered.
+# Pure logic runs bare; the render tests mount site/index.html in jsdom.
 .PHONY: test-js
-test-js:
+test-js: node_modules
 	node --test tests/*.test.mjs
+
+node_modules: package.json package-lock.json
+	npm ci
+	@touch node_modules
 
 .PHONY: clean
 clean:
