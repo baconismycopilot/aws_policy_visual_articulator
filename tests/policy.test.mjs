@@ -321,3 +321,59 @@ test("the dependent-action finding carries an applicable fix", () => {
     assert.ok(fixable, messages(findings));
     assert.deepEqual(fixable.fix.actions, ["iam:PassRole"]);
 });
+
+// --- context propagation ------------------------------------------------------
+
+test("the document reflects later mutations of the shared context object", () => {
+    // app.js keeps one context object and mutates it in place; buildPolicy must
+    // read through to it rather than capture values at construction time.
+    const ctx = { partition: "aws", region: "us-east-1", account: "" };
+    const stmt = statement({
+        actions: [REQUIRES_RESOURCE.name],
+        anyResource: false,
+        resources: [{
+            resourceType: "bucket",
+            template: "arn:${Partition}:s3:${Region}:${Account}:bucket/${BucketName}",
+            values: { BucketName: "my-bucket" },
+        }],
+    });
+
+    const resource = () => buildPolicy("IAMPolicy", [stmt], ctx).Statement[0].Resource;
+
+    assert.equal(resource(), "arn:aws:s3:us-east-1:*:bucket/my-bucket");
+
+    ctx.account = "111122223333";
+    assert.equal(resource(), "arn:aws:s3:us-east-1:111122223333:bucket/my-bucket");
+
+    ctx.region = "eu-west-2";
+    ctx.partition = "aws-cn";
+    assert.equal(resource(), "arn:aws-cn:s3:eu-west-2:111122223333:bucket/my-bucket");
+});
+
+test("the ARN preview formula matches the document's Resource entries", () => {
+    // The grey preview under each resource row is rendered independently of
+    // buildPolicy. If the two ever diverge, the preview lies about the output.
+    const ctx = { partition: "aws", region: "eu-west-2", account: "111122223333" };
+    const rows = [
+        {
+            resourceType: "bucket",
+            template: "arn:${Partition}:s3:::${BucketName}",
+            values: { BucketName: "logs" },
+        },
+        {
+            resourceType: "object",
+            template: "arn:${Partition}:s3:::${BucketName}/${ObjectName}",
+            values: { BucketName: "logs" },
+        },
+    ];
+    const stmt = statement({
+        actions: [REQUIRES_RESOURCE.name],
+        anyResource: false,
+        resources: rows,
+    });
+
+    const previews = rows.map((r) => renderArn(r.template, ctx, r.values));
+    const resources = buildPolicy("IAMPolicy", [stmt], ctx).Statement[0].Resource;
+
+    assert.deepEqual(previews, resources);
+});

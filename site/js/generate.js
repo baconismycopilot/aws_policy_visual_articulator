@@ -84,9 +84,23 @@ export async function initGenerate(sharedContext) {
     drawStatements();
 }
 
-/** Re-render the document when the account context changes. */
+/**
+ * Re-render when the account context changes.
+ *
+ * The document is rebuilt from `context` on every call, but the ARN preview
+ * under each resource row is written once at render time — so the resource
+ * sections have to be redrawn too, or the preview silently disagrees with the
+ * JSON it is meant to be previewing.
+ */
 export function refreshGenerate() {
-    if (ui.output) drawOutput();
+    if (!ui.output) return;
+
+    const spec = POLICY_TYPES[state.policyType];
+    for (const statement of state.statements) {
+        if (uiState.has(statement)) drawResourceSection(statement, spec);
+    }
+
+    drawOutput();
 }
 
 function flash(button, text) {
