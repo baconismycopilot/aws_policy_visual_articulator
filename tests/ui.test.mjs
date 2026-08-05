@@ -369,6 +369,31 @@ test("combobox: blurring mid-query restores the committed label", async () => {
     page.cleanup();
 });
 
+test("combobox: clicking a committed box reopens the full list, label selected", async () => {
+    const { page } = await boot("browse");
+    const { document } = page;
+
+    const input = document.querySelector("#browse-service input");
+    const options = () => document.querySelectorAll("#browse-service .combobox-option").length;
+
+    type(input, "s3");
+    await settle();
+    const matched = options();
+    mousedown(document.querySelector("#browse-service .combobox-option"));
+    await settle();
+
+    // Committing keeps focus, so reopening arrives as a click, not a focus.
+    click(input);
+    await settle();
+
+    assert.ok(options() > matched, "the whole list is offered again, not just the s3 matches");
+    // Without the selection, the next keystroke appends to "Amazon S3 (s3)"
+    // and the filter matches nothing.
+    assert.equal(input.selectionStart, 0);
+    assert.equal(input.selectionEnd, input.value.length);
+    page.cleanup();
+});
+
 // --- resource-scope splitting --------------------------------------------------
 
 test("generate: wildcard-only actions are split out of a scoped statement", async () => {

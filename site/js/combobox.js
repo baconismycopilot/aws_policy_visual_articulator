@@ -200,8 +200,11 @@ export function combobox({
      * Reopening after a selection should offer everything again rather than
      * only what matches the label already sitting in the box.
      */
-    function openAll({ selectText }) {
-        if (selectText) input.select();
+    function openAll() {
+        // Select the committed label so the next keystroke replaces it instead
+        // of appending to it — typing "k" into "Amazon EKS (eks)" would filter
+        // on the whole string and match nothing.
+        input.select();
         filter("");
         active = matches.findIndex((i) => i.key === selectedKey);
         setOpen(true);
@@ -209,13 +212,13 @@ export function combobox({
         scrollActiveIntoView();
     }
 
-    input.addEventListener("focus", () => openAll({ selectText: true }));
+    input.addEventListener("focus", openAll);
 
     // Committing a choice keeps focus on the input (the option's mousedown
     // preventDefault stops the blur), so a second click fires no focus event.
     // Without this the dropdown cannot be reopened without clicking away first.
     input.addEventListener("click", () => {
-        if (!open) openAll({ selectText: false });
+        if (!open) openAll();
     });
 
     input.addEventListener("blur", () => {
