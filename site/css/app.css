@@ -89,3 +89,86 @@ td.description {
 .table > :not(caption) > * > * {
     padding: 0.35rem 0.5rem;
 }
+
+/* --- combobox --------------------------------------------------------- */
+
+.combobox {
+    position: relative;
+}
+
+/* Uses .form-select for the chevron and sizing, but it is a text input, so the
+   caret has to be re-enabled. */
+.combobox-input {
+    cursor: text;
+}
+
+.combobox-clear {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0 0.4rem;
+    line-height: 1;
+    color: var(--bs-secondary-color);
+    border: 0;
+    background: transparent;
+}
+
+.combobox-clear:hover {
+    color: var(--bs-body-color);
+}
+
+.combobox-list {
+    position: absolute;
+    z-index: 1050;
+    inset-inline: 0;
+    top: calc(100% + 0.25rem);
+    max-height: 20rem;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.25rem;
+    list-style: none;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+}
+
+.combobox-option {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.combobox-option:hover,
+.combobox-option.active {
+    background: var(--bs-tertiary-bg);
+}
+
+.combobox-key {
+    margin-left: auto;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+}
+
+.combobox-empty {
+    padding: 0.5rem;
+    color: var(--bs-secondary-color);
+}
+
+/* Action names link to the reference; keep them readable as table text until
+   hovered so 180 rows do not read as a wall of links. */
+.action-link {
+    color: var(--bs-body-color);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--bs-secondary-color);
+}
+
+.action-link:hover {
+    color: var(--bs-link-hover-color);
+    border-bottom-color: currentColor;
+}

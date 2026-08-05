@@ -47,11 +47,11 @@
         <!-- ── Browse ─────────────────────────────────────────────────────── -->
         <div class="tab-pane fade show active" id="pane-browse" role="tabpanel">
             <div class="row g-3">
-                <div class="col-lg-4">
+                <div class="col-lg-5">
                     <label class="form-label" for="browse-service">Service</label>
-                    <select id="browse-service" class="form-select"></select>
+                    <div id="browse-service"></div>
                 </div>
-                <div class="col-lg-8">
+                <div class="col-lg-7">
                     <label class="form-label" for="browse-filter">Filter actions</label>
                     <input id="browse-filter" class="form-control"
                            placeholder="Substring of action name or description" spellcheck="false">
@@ -59,21 +59,19 @@
             </div>
 
             <div id="browse-empty" class="text-secondary py-5 text-center">
-                Select a service to see its ARN formats, actions, and condition keys.
+                Search for a service to see its actions.
             </div>
 
             <div id="browse-body" class="d-none">
-                <h2 class="h5 mt-4">ARN formats</h2>
-                <div id="browse-arns" class="table-responsive"></div>
-
-                <h2 class="h5 mt-4">
-                    Actions <span id="browse-action-count" class="badge text-bg-secondary"></span>
-                </h2>
+                <div class="d-flex align-items-center gap-2 mt-4 mb-2">
+                    <h2 class="h5 mb-0">
+                        Actions <span id="browse-action-count" class="badge text-bg-secondary"></span>
+                    </h2>
+                    <a id="browse-doc-link" class="small ms-auto d-none"
+                       target="_blank" rel="noopener"></a>
+                </div>
                 <div id="browse-levels" class="d-flex flex-wrap gap-2 mb-2"></div>
                 <div id="browse-actions" class="table-responsive"></div>
-
-                <h2 class="h5 mt-4">Service condition keys</h2>
-                <div id="browse-conditions" class="table-responsive"></div>
             </div>
         </div>
 

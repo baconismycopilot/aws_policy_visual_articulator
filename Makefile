@@ -48,7 +48,7 @@ test-py:
 # a browser. The rendering modules are not covered.
 .PHONY: test-js
 test-js:
-	node --test tests/policy.test.mjs
+	node --test tests/*.test.mjs
 
 .PHONY: clean
 clean:

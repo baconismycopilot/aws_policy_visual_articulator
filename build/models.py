@@ -51,6 +51,9 @@ class ConditionKey(BaseModel):
 class Service(BaseModel):
     prefix: str
     service_name: str
+    # Stem of the Service Authorization Reference page, e.g. "list_s3". Not
+    # derivable from the prefix -- 62 services disagree (airflow -> list_mwaa).
+    doc_page: str = ""
     arn_format: str = ""
     arn_regex: str = ""
     has_resource: bool = False
