@@ -83,6 +83,10 @@ tests/
   combobox.test.mjs   fuzzy ranking, against the real service index
   ui.test.mjs         render layer, in jsdom
   harness.mjs         mounts site/index.html with the real data
+  visual/             layout and colour, in Chromium
+    layout.spec.mjs   overflow, stacking, contrast
+    screenshots.spec.mjs  captures for human review, not a gate
+    server.mjs        static server for the suite
 ```
 
 `policy.js` and `arn.js` hold every IAM semantic and deliberately touch no DOM,
@@ -93,6 +97,15 @@ The render layer is covered separately: `ui.test.mjs` mounts the real
 the page through synthetic events. Because it loads the actual markup, renaming
 an element id the modules depend on fails the suite. No browser or webdriver is
 involved, so the whole thing runs in well under a second.
+
+jsdom does no layout, so anything geometric goes in `tests/visual/`, which runs
+in Chromium at desktop and phone widths (`make test-visual`). It asserts on
+measurements rather than pixel baselines — nothing overflows the viewport, the
+dropdown opens inside it and paints above the table, access-level badges clear
+WCAG AA. Baselines were avoided deliberately: they drift with the platform's
+font rendering, so a shot taken on macOS fails on a Linux runner for reasons
+unrelated to the change. Screenshots are still captured and uploaded as CI
+artifacts, just never as a pass/fail gate.
 
 ## Refreshing
 

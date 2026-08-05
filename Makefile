@@ -10,6 +10,7 @@ help:
 	@echo "  data-cached  rebuild from build/.cache/ without refetching"
 	@echo "  serve        serve site/ at http://localhost:$(PORT)"
 	@echo "  test         run the Python and JS test suites"
+	@echo "  test-visual  run the Playwright layout suite (real browser)"
 	@echo "  lint         format, then type-check"
 	@echo "  clean        remove caches and build artifacts"
 
@@ -52,6 +53,13 @@ test-js: node_modules
 node_modules: package.json package-lock.json
 	npm ci
 	@touch node_modules
+
+# Real browser: layout, stacking and computed colour. Downloads Chromium on
+# first run, so it is kept out of `make test`.
+.PHONY: test-visual
+test-visual: node_modules
+	npx playwright install chromium
+	npx playwright test
 
 .PHONY: clean
 clean:

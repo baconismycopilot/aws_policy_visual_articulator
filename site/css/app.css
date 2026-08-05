@@ -64,8 +64,11 @@
 .finding-warning { border-color: var(--bs-warning); }
 .finding-info    { border-color: var(--bs-info); }
 
+/* Wraps because the Sid input, effect select and Remove button together
+   exceed a phone's width, and ms-auto on Remove pushed it past the viewport. */
 .statement-card .card-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
 }
