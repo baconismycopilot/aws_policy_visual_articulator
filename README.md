@@ -79,10 +79,18 @@ tests/
   test_build.py       merge logic and TOC parsing
   policy.test.mjs     policy engine, against real shards
   combobox.test.mjs   fuzzy ranking, against the real service index
+  ui.test.mjs         render layer, in jsdom
+  harness.mjs         mounts site/index.html with the real data
 ```
 
 `policy.js` and `arn.js` hold every IAM semantic and deliberately touch no DOM,
 so `node --test` exercises them directly against the generated shards.
+
+The render layer is covered separately: `ui.test.mjs` mounts the real
+`site/index.html` in jsdom, wires `fetch` to the real `site/data/`, and drives
+the page through synthetic events. Because it loads the actual markup, renaming
+an element id the modules depend on fails the suite. No browser or webdriver is
+involved, so the whole thing runs in well under a second.
 
 ## Refreshing
 
@@ -100,9 +108,12 @@ Locally:
 ```sh
 make data          # refetch and rebuild
 make data-cached   # rebuild from build/.cache/ without refetching
-make test          # Python + JS suites
+make test          # Python + JS suites (installs jsdom on first run)
 make check         # clean, lint, test
 ```
+
+The site itself has no npm dependencies. `package.json` exists solely for
+jsdom.
 
 ## Data shape
 

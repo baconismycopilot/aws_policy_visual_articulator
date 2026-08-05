@@ -35,6 +35,9 @@ jobs:
       - name: Rebuild site data
         run: uv run python -m build.build
 
+      - name: Install front-end test dependencies
+        run: npm ci
+
       - name: Run tests
         run: |
           uv run --group dev pytest

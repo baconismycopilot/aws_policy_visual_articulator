@@ -209,3 +209,6 @@ __marimo__/
 
 # Build cache (regenerate with `make data`)
 build/.cache/
+
+# Node dev dependencies (jsdom, for the front-end tests)
+node_modules/
