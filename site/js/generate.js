@@ -789,10 +789,24 @@ async function applyFix(finding) {
 
     for (const [prefix, names] of otherServices) {
         await loadService(prefix);
+        const sid = `Dependencies${prefix.replace(/[^A-Za-z0-9]/g, "")}`;
+
+        // Top up the statement an earlier fix made rather than pushing a second
+        // one beside it. Matched on the generated Sid so this only ever touches
+        // its own work, never a statement the user built for that service --
+        // theirs may be a Deny, or carry resources these actions must not get.
+        const existing = state.statements.find(
+            (s) => s.sid === sid && s.servicePrefix === prefix && s.effect === "Allow",
+        );
+        if (existing) {
+            existing.actions = [...new Set([...existing.actions, ...names])];
+            continue;
+        }
+
         const extra = emptyStatement();
         extra.servicePrefix = prefix;
         extra.actions = names;
-        extra.sid = `Dependencies${prefix.replace(/[^A-Za-z0-9]/g, "")}`;
+        extra.sid = sid;
         state.statements.push(extra);
     }
 

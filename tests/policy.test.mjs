@@ -398,6 +398,38 @@ test("the dependent-action finding carries an applicable fix", () => {
     assert.deepEqual(fixable.fix.actions, ["iam:PassRole"]);
 });
 
+test("a dependent action granted by another statement clears the finding", () => {
+    // What the fix itself produces. If the check stays inside one statement the
+    // finding never clears, and clicking again appends another iam statement --
+    // duplicate Sids, which AWS rejects outright.
+    const findings = validate("IAMPolicy", [
+        statement({ servicePrefix: "access-analyzer", actions: ["StartPolicyGeneration"] }),
+        statement({ servicePrefix: "iam", sid: "Dependenciesiam", actions: ["PassRole"] }),
+    ], getService);
+
+    assert.equal(findings.filter((f) => f.fix).length, 0, messages(findings));
+});
+
+test("a dependent action satisfied only by a Deny still counts as missing", () => {
+    const findings = validate("IAMPolicy", [
+        statement({ servicePrefix: "access-analyzer", actions: ["StartPolicyGeneration"] }),
+        statement({ servicePrefix: "iam", effect: "Deny", actions: ["PassRole"] }),
+    ], getService);
+
+    const fixable = findings.find((f) => f.fix);
+    assert.ok(fixable, messages(findings));
+    assert.deepEqual(fixable.fix.actions, ["iam:PassRole"]);
+});
+
+test("a service wildcard covers the dependent actions it grants", () => {
+    const findings = validate("IAMPolicy", [
+        statement({ servicePrefix: "access-analyzer", actions: ["StartPolicyGeneration"] }),
+        statement({ servicePrefix: "iam", wildcardAction: true, actions: [] }),
+    ], getService);
+
+    assert.equal(findings.filter((f) => f.fix).length, 0, messages(findings));
+});
+
 // --- context propagation ------------------------------------------------------
 
 test("the document reflects later mutations of the shared context object", () => {
