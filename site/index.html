@@ -143,11 +143,11 @@
                 <div class="col-lg-7">
                     <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
                         <div>
-                            <label class="form-label" for="gen-policy-type">Policy type</label>
+                            <label class="form-label eyebrow d-block mb-1" for="gen-policy-type">Policy type</label>
                             <select id="gen-policy-type" class="form-select w-auto"></select>
                         </div>
                         <div class="text-secondary small pb-2" id="gen-policy-hint"></div>
-                        <button id="gen-add-statement" class="btn btn-outline-primary btn-sm ms-auto mb-1"
+                        <button id="gen-add-statement" class="btn-quiet ms-auto mb-1"
                                 type="button">+ Add statement
                         </button>
                     </div>
@@ -157,20 +157,18 @@
 
                 <div class="col-lg-5">
                     <div class="sticky-panel">
-                        <div class="d-flex align-items-center mb-2">
-                            <h2 class="h5 mb-0">Policy</h2>
-                            <span id="gen-size" class="badge text-bg-secondary ms-2"></span>
-                            <button id="gen-copy" class="btn btn-primary btn-sm ms-auto" type="button">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <h2 class="eyebrow mb-0">Policy</h2>
+                            <span id="gen-size" class="policy-size"></span>
+                            <button id="gen-copy" class="btn-strong ms-auto" type="button">
                                 Copy JSON
                             </button>
-                            <button id="gen-download" class="btn btn-outline-secondary btn-sm ms-2"
-                                    type="button">Download
-                            </button>
+                            <button id="gen-download" class="btn-quiet" type="button">Download</button>
                         </div>
 
                         <pre id="gen-output" class="policy-output"></pre>
 
-                        <h2 class="h6 mt-3">Checks</h2>
+                        <h2 class="eyebrow mt-3 mb-2">Checks</h2>
                         <div id="gen-findings" class="vstack gap-2"></div>
                     </div>
                 </div>

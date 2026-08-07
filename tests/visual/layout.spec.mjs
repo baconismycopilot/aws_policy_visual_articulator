@@ -187,7 +187,9 @@ test("the selection count tracks the checkboxes", async ({ page }) => {
     await page.getByRole("tab", { name: "Generate" }).click();
     await pickService(page, "#gen-statements .combobox", "eks");
 
-    const badge = page.locator("#gen-statements .badge").first();
+    // Hooked on .stmt-count, not a generic `.badge`: the access-level filters
+    // below it are badges too, so `.badge` first only ever worked by DOM order.
+    const badge = page.locator("#gen-statements .stmt-count").first();
     await expect(badge).toHaveText("0 selected");
 
     await page.locator(".action-picker .form-check-input").first().check();

@@ -18,7 +18,7 @@ import {
     resourceTypesFor,
     validate,
 } from "./policy.js";
-import { accessLevelBadge, accessLevelBadges, el, option, render } from "./dom.js";
+import { accessLevelBadge, accessLevelBadges, el, option, render, scopeMarker } from "./dom.js";
 import { combobox } from "./combobox.js";
 
 /** Rendering every action of a large service (ec2 has ~1,800) is sluggish. */
@@ -147,14 +147,16 @@ function drawStatements() {
 }
 
 function statementCard(statement, index, spec) {
-    const body = el("div", { className: "card-body vstack gap-3" });
+    const body = el("div", { className: "vstack gap-3" });
 
-    const card = el("div", { className: "card statement-card" }, [
-        el("div", { className: "card-header" }, [
-            el("span", { className: "fw-semibold", textContent: `Statement ${index + 1}` }),
+    const card = el("div", {
+        className: `statement-card${statement.effect === "Deny" ? " is-deny" : ""}`,
+    }, [
+        el("div", { className: "stmt-head" }, [
+            el("span", { className: "stmt-tag", textContent: `Statement ${index + 1}` }),
             effectToggle(statement),
             el("input", {
-                className: "form-control form-control-sm w-auto ms-2",
+                className: "form-control form-control-sm w-auto arn-segment",
                 placeholder: "Sid (optional)",
                 value: statement.sid,
                 spellcheck: "false",
@@ -165,7 +167,7 @@ function statementCard(statement, index, spec) {
             }),
             el("button", {
                 type: "button",
-                className: "btn btn-sm btn-outline-danger ms-auto",
+                className: "stmt-remove",
                 textContent: "Remove",
                 disabled: state.statements.length === 1,
                 onclick: () => {
@@ -203,6 +205,10 @@ function effectToggle(statement) {
         className: "form-select form-select-sm w-auto",
         onchange: (event) => {
             statement.effect = event.target.value;
+            // Reached from the event rather than closed over, because the panel
+            // does not exist yet while its own header is being built.
+            event.target.closest(".statement-card")
+                ?.classList.toggle("is-deny", statement.effect === "Deny");
             drawOutput();
         },
     }, [
@@ -238,7 +244,7 @@ function serviceRow(statement, spec) {
     });
 
     return el("div", {}, [
-        el("label", { className: "form-label" }, [
+        el("label", { className: "eyebrow d-block mb-1" }, [
             el("span", { textContent: "Service" }),
             pinned
                 ? el("span", {
@@ -263,7 +269,7 @@ function principalSection(statement, spec) {
     ));
 
     const children = [
-        el("label", { className: "form-label" }, [
+        el("label", { className: "eyebrow d-block mb-1" }, [
             el("span", { textContent: "Principal" }),
             spec.principal === "required"
                 ? el("span", { className: "text-danger", textContent: " *" })
@@ -325,10 +331,10 @@ function drawActionSection(statement) {
     local.filter ??= "";
     local.levels ??= new Set();
 
-    refs.actionCount = el("span", { className: "badge text-bg-secondary" });
+    refs.actionCount = el("span", { className: "stmt-count" });
 
     const header = el("div", { className: "d-flex align-items-center gap-2 mb-2" }, [
-        el("label", { className: "form-label mb-0", textContent: "Actions" }),
+        el("label", { className: "eyebrow mb-0", textContent: "Actions" }),
         refs.actionCount,
         el("div", { className: "form-check form-switch ms-auto" }, [
             el("input", {
@@ -376,7 +382,7 @@ function drawActionSection(statement) {
             .filter((level) => service.actions.some((a) => hasAccessLevel(a, level)))
             .map((level) => el("button", {
                 type: "button",
-                className: `btn btn-sm btn-outline-secondary${local.levels.has(level) ? " active" : ""}`,
+                className: `level-filter${local.levels.has(level) ? " active" : ""}`,
                 onclick: (event) => {
                     if (local.levels.has(level)) local.levels.delete(level);
                     else local.levels.add(level);
@@ -407,7 +413,7 @@ function selectionTools(statement) {
     return el("div", { className: "d-flex gap-2 mt-2" }, [
         el("button", {
             type: "button",
-            className: "btn btn-sm btn-link p-0",
+            className: "btn-plain",
             textContent: "Select all shown",
             onclick: () => {
                 const shown = visibleActions(statement).map((a) => a.name);
@@ -419,7 +425,7 @@ function selectionTools(statement) {
         }),
         el("button", {
             type: "button",
-            className: "btn btn-sm btn-link p-0",
+            className: "btn-plain",
             textContent: "Clear",
             onclick: () => {
                 statement.actions = [];
@@ -457,7 +463,7 @@ function drawPicker(statement) {
 
     const rows = shown.map((action) => {
         const id = `act-${statement.servicePrefix}-${action.name}-${state.statements.indexOf(statement)}`;
-        return el("div", { className: "form-check" }, [
+        return el("div", { className: "picker-row" }, [
             el("input", {
                 className: "form-check-input",
                 type: "checkbox",
@@ -477,13 +483,17 @@ function drawPicker(statement) {
                     drawOutput();
                 },
             }),
-            el("label", { className: "form-check-label", for: id }, [
-                el("span", { className: "arn-segment", textContent: action.name }),
-                el("span", { textContent: " " }),
-                accessLevelBadges(action.access_levels),
+            // Mirrors a Browse table row: identifier, levels, then whether it can
+            // be scoped, with the prose description underneath.
+            el("label", { for: id }, [
+                el("div", { className: "d-flex flex-wrap align-items-baseline gap-2" }, [
+                    el("span", { className: "picker-name", textContent: action.name }),
+                    accessLevelBadges(action.access_levels),
+                    el("span", { className: "ms-auto" }, [scopeMarker(action)]),
+                ]),
                 action.description
                     ? el("div", {
-                          className: "small text-secondary",
+                          className: "picker-desc",
                           textContent: action.description,
                       })
                     : null,
@@ -493,13 +503,13 @@ function drawPicker(statement) {
 
     if (matches.length > shown.length) {
         rows.push(el("div", {
-            className: "small text-secondary pt-2",
+            className: "picker-note",
             textContent: `Showing ${shown.length} of ${matches.length}. Filter to narrow.`,
         }));
     }
 
     if (rows.length === 0) {
-        rows.push(el("div", { className: "small text-secondary", textContent: "No actions match." }));
+        rows.push(el("div", { className: "picker-note", textContent: "No actions match." }));
     }
 
     render(refs.picker, ...rows);
@@ -529,7 +539,7 @@ function drawResourceSection(statement, spec) {
     ]);
 
     const children = [
-        el("label", { className: "form-label", textContent: "Resources" }),
+        el("label", { className: "eyebrow d-block mb-1", textContent: "Resources" }),
         toggle,
     ];
 
@@ -621,12 +631,12 @@ function arnRow(statement, row) {
 
     preview.textContent = renderArn(row.template, context, row.values);
 
-    return el("div", { className: "border rounded p-2 mb-2" }, [
+    return el("div", { className: "res-row" }, [
         el("div", { className: "d-flex align-items-center gap-2 mb-1" }, [
-            el("span", { className: "fw-semibold small", textContent: row.resourceType }),
+            el("span", { className: "res-type", textContent: row.resourceType }),
             row.required
-                ? el("span", { className: "badge text-bg-warning", textContent: "required" })
-                : el("span", { className: "badge text-bg-secondary", textContent: "optional" }),
+                ? el("span", { className: "scope-required", textContent: "required" })
+                : el("span", { className: "scope-optional", textContent: "optional" }),
         ]),
         el("div", { className: "row g-2" }, inputs),
         el("div", { className: "mt-1" }, [preview]),
@@ -689,7 +699,7 @@ function drawConditionSection(statement) {
             el("div", { className: "col-sm-1" }, [
                 el("button", {
                     type: "button",
-                    className: "btn btn-sm btn-outline-danger",
+                    className: "btn-plain",
                     textContent: "×",
                     onclick: () => {
                         statement.conditions.splice(i, 1);
@@ -703,10 +713,10 @@ function drawConditionSection(statement) {
 
     render(refs.conditions, el("div", {}, [
         el("div", { className: "d-flex align-items-center gap-2 mb-2" }, [
-            el("label", { className: "form-label mb-0", textContent: "Conditions" }),
+            el("label", { className: "eyebrow mb-0", textContent: "Conditions" }),
             el("button", {
                 type: "button",
-                className: "btn btn-sm btn-outline-secondary",
+                className: "btn-quiet",
                 textContent: "+ Add",
                 onclick: () => {
                     statement.conditions.push({ key: "", operator: "StringEquals", value: "" });
@@ -735,7 +745,7 @@ function drawOutput() {
     const bytes = new TextEncoder().encode(json).length;
     ui.size.textContent = `${bytes} bytes`;
     // Managed policies cap at 6,144 characters of non-whitespace.
-    ui.size.classList.toggle("text-bg-danger", json.replace(/\s/g, "").length > 6144);
+    ui.size.classList.toggle("over-cap", json.replace(/\s/g, "").length > 6144);
 
     const findings = validate(state.policyType, state.statements, peekService);
 
@@ -756,7 +766,7 @@ function findingCard(finding) {
         children.push(el("div", { className: "mt-1" }, [
             el("button", {
                 type: "button",
-                className: "btn btn-sm btn-outline-info",
+                className: "btn-quiet",
                 textContent: finding.fix.label,
                 onclick: () => applyFix(finding),
             }),

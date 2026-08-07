@@ -46,7 +46,24 @@ split along a strict line:
   half of `combobox.js`. Put IAM logic here, not in the render layer.
 - **Render layer**: `browse.js`, `generate.js`, `dom.js`, `app.js`. `dom.js` builds everything
   with `createElement`/`textContent` and never `innerHTML` — action descriptions and ARN
-  templates come from upstream JSON and land in the page verbatim.
+  templates come from upstream JSON and land in the page verbatim. Anything both tabs render
+  lives in `dom.js` (`accessLevelBadge`, `scopeMarker`) rather than being written twice, so the
+  same fact cannot end up looking different on each tab.
+
+### Design vocabulary
+
+`app.css` is deliberately layered, and the layers matter more than they look:
+
+- **Shared, at the top**: the `--br-*` palette, `.eyebrow`, `.scope-*`, the access-level colours,
+  and the combobox. Both tabs and the navbar draw from these.
+- **Pane-scoped, below**: `#pane-browse` (masthead, permission surface, action table) and
+  `#pane-generate` (statement panels, action picker, output panel).
+
+The rule when promoting something to shared: **delete the pane-scoped copy**. An id-specificity
+duplicate silently outranks the shared rule, and the two drift apart with nothing to catch it.
+
+Both panes obey one type rule — monospace where the content is an IAM identifier, sans where it
+is prose — and only the Browse permission strip animates.
 
 `data.js` is the only fetch path: `index.json` loads once, a service shard is fetched on
 selection and memoized for the session. The navbar's CI badge is the page's one other external

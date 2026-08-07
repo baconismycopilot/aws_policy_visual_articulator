@@ -9,8 +9,8 @@
  */
 
 import { loadIndex, loadService } from "./data.js";
-import { ACCESS_LEVELS, canScope, hasAccessLevel, mustScope } from "./policy.js";
-import { accessLevelBadges, el, render, table } from "./dom.js";
+import { ACCESS_LEVELS, hasAccessLevel } from "./policy.js";
+import { accessLevelBadges, el, render, scopeMarker, table } from "./dom.js";
 import { combobox } from "./combobox.js";
 
 const DOCS_BASE = "https://docs.aws.amazon.com/service-authorization/latest/reference/";
@@ -159,21 +159,6 @@ function matchingActions() {
     });
 }
 
-function scopeCell(action) {
-    if (mustScope(action)) {
-        const types = (action.resource_types || [])
-            .filter((rt) => rt.required && rt.resource_type)
-            .map((rt) => rt.resource_type);
-        return el("span", {
-            className: "scope-required",
-            textContent: `required: ${types.join(", ")}`,
-        });
-    }
-    if (canScope(action)) {
-        return el("span", { className: "scope-optional", textContent: "optional" });
-    }
-    return el("span", { className: "scope-wildcard", textContent: '"*" only' });
-}
 
 function actionCell(action) {
     const qualified = `${service.prefix}:${action.name}`;
@@ -209,7 +194,7 @@ function drawActions() {
         el("tr", {}, [
             el("td", {}, [actionCell(action)]),
             el("td", {}, [accessLevelBadges(action.access_levels)]),
-            el("td", {}, [scopeCell(action)]),
+            el("td", {}, [scopeMarker(action)]),
             el("td", {
                 className: "description",
                 textContent: action.description || "—",

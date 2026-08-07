@@ -6,7 +6,12 @@
  * Everything is built with createElement and textContent rather than innerHTML:
  * action descriptions and ARN templates come from upstream JSON and land in the
  * page verbatim, so they must never be parsed as markup.
+ *
+ * A few helpers here know a little IAM — the access-level badge and the scope
+ * marker — because both tabs render those and they must look the same in each.
  */
+
+import { canScope, mustScope } from "./policy.js";
 
 /**
  * @param {string} tag
@@ -73,6 +78,32 @@ export function accessLevelBadges(levels) {
     }
 
     return fragment;
+}
+
+/**
+ * Whether an action can be scoped to an ARN.
+ *
+ * Both tabs show this — Browse in its scope column, Generate against the actions
+ * you are picking — and it has to read identically in each, so the markup lives
+ * here rather than being written twice.
+ *
+ * @param {object} action
+ * @returns {HTMLElement}
+ */
+export function scopeMarker(action) {
+    if (mustScope(action)) {
+        const types = (action.resource_types || [])
+            .filter((rt) => rt.required && rt.resource_type)
+            .map((rt) => rt.resource_type);
+        return el("span", {
+            className: "scope-required",
+            textContent: `required: ${types.join(", ")}`,
+        });
+    }
+    if (canScope(action)) {
+        return el("span", { className: "scope-optional", textContent: "optional" });
+    }
+    return el("span", { className: "scope-wildcard", textContent: '"*" only' });
 }
 
 export function option(value, label, selected = false) {
