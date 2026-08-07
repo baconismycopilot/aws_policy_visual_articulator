@@ -38,10 +38,22 @@ function resolve(url) {
     return fromRoot(`node_modules/${pkg}/${file}`);
 }
 
+/* The navbar's CI badge is an <img> served by github.com. Left unrouted it would
+   put a live network call in a required gate, and worse, make the navbar's width
+   depend on the state of the repo: GitHub sizes the badge to the word inside it,
+   so main going red would narrow it and quietly move every assertion downstream.
+   Stubbed at the passing width (90x20, the real badge's intrinsic size). */
+const BADGE = `<svg xmlns="http://www.w3.org/2000/svg" width="90" height="20">
+    <rect width="90" height="20" fill="#24292e"/>
+</svg>`;
+
 export const test = base.extend({
     page: async ({ page }, use) => {
         await page.route("https://cdn.jsdelivr.net/**", (route) =>
             route.fulfill({ path: resolve(route.request().url()) }),
+        );
+        await page.route("https://github.com/**/badge.svg*", (route) =>
+            route.fulfill({ contentType: "image/svg+xml", body: BADGE }),
         );
         await use(page);
     },

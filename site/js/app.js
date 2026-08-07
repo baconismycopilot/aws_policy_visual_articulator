@@ -1,17 +1,22 @@
 "use strict";
 
 /**
- * Entry point: wires the shared account context and boots both tabs.
+ * Entry point: wires the account context and boots both tabs.
  */
 
 import { loadGlobal, loadManifest } from "./data.js";
+import { renderArn } from "./arn.js";
 import { initBrowse } from "./browse.js";
 import { initGenerate, refreshGenerate } from "./generate.js";
 import { el, option, render } from "./dom.js";
 
 const STORAGE_KEY = "apva.context";
 
-/** Shared by the ARN builders in both tabs. */
+/**
+ * Read by the ARN builders on the Generate tab. The Browse tab does not use it
+ * -- it shows action names, not ARNs -- which is why the controls live in that
+ * pane rather than in the navbar.
+ */
 const context = {
     partition: "aws",
     region: "us-east-1",
@@ -34,10 +39,26 @@ function saveContext() {
     }
 }
 
+/**
+ * The shape of every ARN the three fields feed.
+ *
+ * A real template run through the real renderer, so the echo cannot drift from
+ * the previews inside a statement: an emptied field wildcards to `*` in both,
+ * because that is `renderArn`'s documented rule. The two angle-bracketed
+ * segments are not `${...}` placeholders, so they pass through untouched —
+ * which is what we want, since the context does not supply them.
+ */
+const CONTEXT_ARN = "arn:${Partition}:⟨service⟩:${Region}:${Account}:⟨resource⟩";
+
+function contextArn() {
+    return renderArn(CONTEXT_ARN, context);
+}
+
 function wireContextBar(globalData) {
     const partition = document.getElementById("ctx-partition");
     const region = document.getElementById("ctx-region");
     const account = document.getElementById("ctx-account");
+    const arn = document.getElementById("ctx-arn");
 
     render(
         partition,
@@ -50,6 +71,7 @@ function wireContextBar(globalData) {
         context.partition = partition.value;
         context.region = region.value;
         context.account = account.value;
+        arn.textContent = contextArn();
         saveContext();
         refreshGenerate();
     };
@@ -57,6 +79,10 @@ function wireContextBar(globalData) {
     partition.addEventListener("change", onChange);
     region.addEventListener("input", onChange);
     account.addEventListener("input", onChange);
+
+    // The stored context is already in `context`, so the echo has something to
+    // show before the first keystroke.
+    arn.textContent = contextArn();
 }
 
 function showFatal(error) {
