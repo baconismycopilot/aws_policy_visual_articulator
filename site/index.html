@@ -46,31 +46,52 @@
     <div class="tab-content">
         <!-- ── Browse ─────────────────────────────────────────────────────── -->
         <div class="tab-pane fade show active" id="pane-browse" role="tabpanel">
-            <div class="row g-3">
+            <div class="row g-3 browse-controls">
                 <div class="col-lg-5">
-                    <label class="form-label" for="browse-service">Service</label>
+                    <label class="form-label eyebrow" for="browse-service">Service</label>
                     <div id="browse-service"></div>
                 </div>
                 <div class="col-lg-7">
-                    <label class="form-label" for="browse-filter">Filter actions</label>
+                    <label class="form-label eyebrow" for="browse-filter">Filter actions</label>
                     <input id="browse-filter" class="form-control"
                            placeholder="Substring of action name or description" spellcheck="false">
                 </div>
             </div>
 
-            <div id="browse-empty" class="text-secondary py-5 text-center">
-                Search for a service to see its actions.
+            <div id="browse-empty" class="browse-empty">
+                <p class="browse-empty-lead">Pick a service to read its permission surface.</p>
+                <p class="browse-empty-hint">
+                    Every action AWS documents, with the access levels it carries, whether it
+                    can be scoped to an ARN, and a link to its entry in the reference.
+                </p>
             </div>
 
             <div id="browse-body" class="d-none">
-                <div class="d-flex align-items-center gap-2 mt-4 mb-2">
-                    <h2 class="h5 mb-0">
-                        Actions <span id="browse-action-count" class="badge text-bg-secondary"></span>
-                    </h2>
-                    <a id="browse-doc-link" class="small ms-auto d-none"
-                       target="_blank" rel="noopener"></a>
-                </div>
-                <div id="browse-levels" class="d-flex flex-wrap gap-2 mb-2"></div>
+                <header class="svc-masthead">
+                    <div class="svc-identity">
+                        <span id="browse-svc-prefix" class="svc-prefix"></span>
+                        <h2 id="browse-svc-name" class="svc-name"></h2>
+                    </div>
+                    <div class="svc-meta">
+                        <span id="browse-action-count" class="svc-count"></span>
+                        <span class="svc-count-label">actions shown</span>
+                        <a id="browse-doc-link" class="svc-doc d-none"
+                           target="_blank" rel="noopener"></a>
+                    </div>
+                </header>
+
+                <section class="surface">
+                    <div class="surface-head">
+                        <span class="eyebrow" id="surface-label">Permission surface</span>
+                        <span class="surface-note">
+                            Width tracks how many actions carry each level — some carry two.
+                            Select a level to filter.
+                        </span>
+                    </div>
+                    <div id="browse-levels" class="surface-strip"
+                         role="group" aria-labelledby="surface-label"></div>
+                </section>
+
                 <div id="browse-actions" class="table-responsive"></div>
             </div>
         </div>

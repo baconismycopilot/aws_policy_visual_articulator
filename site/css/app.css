@@ -43,14 +43,26 @@
     padding: 0.15em 0.45em;
 }
 
-/* Access levels are the primary way to read a permission set at a glance,
-   so they get consistent colours everywhere they appear. */
-.level-Read        { background-color: #1f6f8b; }
-.level-List        { background-color: #3f6212; }
-.level-Write       { background-color: #9a3412; }
-.level-Tagging     { background-color: #4c1d95; }
-.level-Permissions { background-color: #9f1239; }
-.level-Unknown     { background-color: #44403c; }
+/* Access levels are the primary way to read a permission set at a glance, so
+   they get consistent colours everywhere they appear. Held as custom properties
+   because the Browse tab's permission-surface strip paints the same six hues at
+   full width -- one source of truth keeps the strip and the row badges agreeing.
+   Every value clears 4.5:1 against white; layout.spec.mjs enforces that. */
+:root {
+    --level-Read:        #1f6f8b;
+    --level-List:        #3f6212;
+    --level-Write:       #9a3412;
+    --level-Tagging:     #4c1d95;
+    --level-Permissions: #9f1239;
+    --level-Unknown:     #44403c;
+}
+
+.level-Read        { background-color: var(--level-Read); }
+.level-List        { background-color: var(--level-List); }
+.level-Write       { background-color: var(--level-Write); }
+.level-Tagging     { background-color: var(--level-Tagging); }
+.level-Permissions { background-color: var(--level-Permissions); }
+.level-Unknown     { background-color: var(--level-Unknown); }
 
 .finding {
     font-size: 0.8125rem;
@@ -174,4 +186,319 @@ td.description {
 .action-link:hover {
     color: var(--bs-link-hover-color);
     border-bottom-color: currentColor;
+}
+
+/* --- Browse tab ------------------------------------------------------------
+
+   Scoped to #pane-browse throughout: app.css is shared with Generate, and the
+   only things both tabs are meant to agree on are the access-level colours and
+   the combobox above.
+
+   The type is monospace where the content is an IAM identifier and sans where
+   it is prose. That inversion of the usual pairing is the point: an action name
+   and an ARN are the artifacts this page exists to show, so they get the
+   display role, and descriptions stay in the reading face.                   */
+
+#pane-browse {
+    --br-panel: #161c24;
+    --br-rule: #242e3a;
+    --br-ink: #e8eef5;
+    --br-dim: #8d9bab;
+}
+
+#pane-browse .eyebrow {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--br-dim);
+}
+
+#pane-browse .browse-controls {
+    margin-bottom: 1.5rem;
+}
+
+/* --- empty state --- */
+
+#pane-browse .browse-empty {
+    border: 1px dashed var(--br-rule);
+    border-radius: var(--bs-border-radius);
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+}
+
+#pane-browse .browse-empty-lead {
+    font-family: var(--bs-font-monospace);
+    font-size: 1.0625rem;
+    letter-spacing: -0.01em;
+    color: var(--br-ink);
+    margin-bottom: 0.5rem;
+}
+
+#pane-browse .browse-empty-hint {
+    max-width: 34rem;
+    margin: 0 auto;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--br-dim);
+}
+
+/* --- masthead --- */
+
+#pane-browse .svc-masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 1.25rem;
+    padding-bottom: 0.875rem;
+    border-bottom: 1px solid var(--br-rule);
+}
+
+#pane-browse .svc-identity {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    min-width: 0;
+}
+
+/* The IAM prefix is the service's real name as far as a policy is concerned,
+   so it is set as a tag rather than buried in parentheses after the label. */
+#pane-browse .svc-prefix {
+    flex: none;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 0.3em 0.5em;
+    border: 1px solid var(--br-rule);
+    border-radius: 0.25rem;
+    color: var(--br-dim);
+}
+
+#pane-browse .svc-name {
+    font-family: var(--bs-font-monospace);
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--br-ink);
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#pane-browse .svc-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-inline-start: auto;
+    font-size: 0.8125rem;
+}
+
+#pane-browse .svc-count {
+    font-family: var(--bs-font-monospace);
+    font-variant-numeric: tabular-nums;
+    color: var(--br-ink);
+}
+
+#pane-browse .svc-count-label {
+    color: var(--br-dim);
+}
+
+#pane-browse .svc-doc {
+    margin-inline-start: 0.75rem;
+    color: var(--br-dim);
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+}
+
+#pane-browse .svc-doc:hover {
+    color: var(--br-ink);
+}
+
+/* --- permission surface (the strip that doubles as the level filter) --- */
+
+#pane-browse .surface {
+    margin: 1.125rem 0 1.25rem;
+}
+
+#pane-browse .surface-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+#pane-browse .surface-note {
+    font-size: 0.75rem;
+    color: var(--br-dim);
+}
+
+#pane-browse .surface-strip {
+    display: flex;
+    gap: 2px;
+    align-items: stretch;
+}
+
+/* Each segment is a filter button whose width is its share of the service's
+   level assignments, set by flex-grow from the real count.
+
+   `container-type: inline-size` does two jobs: it lets the label hide itself
+   when its own segment is too narrow to hold it (below), and it stops the
+   label's width from feeding back into the flex sizing, which would otherwise
+   make a long level name claim more width than its count earns.
+
+   min-width is the one concession to honesty: a level holding seven of a
+   service's actions would otherwise render a few pixels wide and be unclickable. */
+#pane-browse .surface-seg {
+    container-type: inline-size;
+    flex: 1 1 0;
+    min-width: 2.75rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.125rem;
+    height: 3.25rem;
+    padding: 0.375rem 0.5rem;
+    border: 0;
+    border-radius: 0.25rem;
+    background: var(--seg);
+    color: #fff;
+    text-align: start;
+    transition: background-color 120ms linear, box-shadow 120ms linear, color 120ms linear;
+    /* The strip is rebuilt on service selection, so this runs once, there: the
+       surface resolves into place rather than appearing fully formed. Nothing
+       else on the tab animates. */
+    animation: seg-in 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes seg-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.375rem);
+    }
+}
+
+#pane-browse .surface-seg:hover {
+    filter: brightness(1.15);
+}
+
+#pane-browse .surface-seg:focus-visible {
+    outline: 2px solid var(--br-ink);
+    outline-offset: 2px;
+}
+
+#pane-browse .seg-count {
+    font-family: var(--bs-font-monospace);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* Hidden below the width where a label is worth showing at all; truncated with
+   an ellipsis above it. A narrow level then reads as its count alone rather than
+   as a word cut off mid-stroke. */
+#pane-browse .seg-label {
+    display: none;
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.85;
+}
+
+@container (min-width: 4rem) {
+    #pane-browse .seg-label {
+        display: block;
+    }
+}
+
+/* With a filter on, the unselected levels drop to an outline so the strip still
+   shows the whole surface while making the selection unmistakable. */
+#pane-browse .surface-strip.filtering .surface-seg:not(.active) {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--br-rule), inset 0 3px 0 var(--seg);
+    color: var(--br-dim);
+}
+
+/* --- action table --- */
+
+#pane-browse #browse-actions {
+    border: 1px solid var(--br-rule);
+    border-radius: var(--bs-border-radius);
+}
+
+/* Long services run to hundreds of rows (ec2 has ~1,800), so the table gets its
+   own scroll area on a large screen and the masthead and strip stay put while
+   you read it. Left to flow on small screens, where the viewport is the pane. */
+@media (min-width: 992px) {
+    #pane-browse #browse-actions {
+        max-height: calc(100vh - 22rem);
+        min-height: 20rem;
+    }
+}
+
+#pane-browse #browse-actions .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--br-ink);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.035);
+    --bs-table-hover-color: var(--br-ink);
+    margin: 0;
+}
+
+/* z-index stays well under the combobox list's 1050 -- the dropdown opens over
+   this table and layout.spec.mjs hit-tests that it does. */
+#pane-browse #browse-actions thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--br-panel);
+    border-bottom: 1px solid var(--br-rule);
+    font-family: var(--bs-font-monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--br-dim);
+    white-space: nowrap;
+    padding: 0.6rem 0.75rem;
+}
+
+#pane-browse #browse-actions tbody td {
+    padding: 0.45rem 0.75rem;
+    border-color: var(--br-rule);
+    vertical-align: baseline;
+}
+
+#pane-browse #browse-actions tbody tr:last-child td {
+    border-bottom-width: 0;
+}
+
+#pane-browse #browse-actions td.description {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--br-dim);
+}
+
+#pane-browse .scope-required {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    color: #f0b429;
+}
+
+#pane-browse .scope-optional,
+#pane-browse .scope-wildcard {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    color: var(--br-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #pane-browse .surface-seg {
+        transition: none;
+        animation: none;
+    }
 }
