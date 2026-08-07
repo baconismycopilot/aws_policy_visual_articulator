@@ -63,9 +63,12 @@
     top: 1rem;
 }
 
+/* The generated document is the artifact this tab exists to produce, so it gets
+   the panel fill and the reader's attention rather than a recessed code-block
+   look. */
 .policy-output {
-    background: var(--bs-tertiary-bg);
-    border: 1px solid var(--bs-border-color);
+    background: var(--br-panel);
+    border: 1px solid var(--br-rule);
     border-radius: var(--bs-border-radius);
     padding: 0.75rem;
     margin: 0;
@@ -73,6 +76,7 @@
     overflow: auto;
     font-size: 0.8125rem;
     line-height: 1.45;
+    color: var(--br-ink);
     tab-size: 2;
 }
 
@@ -81,13 +85,8 @@
 .action-picker {
     max-height: 18rem;
     overflow-y: auto;
-    border: 1px solid var(--bs-border-color);
+    border: 1px solid var(--br-rule);
     border-radius: var(--bs-border-radius);
-    padding: 0.5rem;
-}
-
-.action-picker .form-check {
-    margin-bottom: 0.125rem;
 }
 
 .action-picker label {
@@ -135,6 +134,23 @@
     color: var(--br-dim);
 }
 
+/* Whether an action can be scoped to an ARN. Browse reports it per action and
+   Generate per resource row -- the same fact either way, so it gets one
+   treatment. Amber carries "required" because that is the one the reader has to
+   act on; the other two are informational and stay dim. */
+.scope-required {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    color: #f0b429;
+}
+
+.scope-optional,
+.scope-wildcard {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    color: var(--br-dim);
+}
+
 .level-Read        { background-color: var(--level-Read); }
 .level-List        { background-color: var(--level-List); }
 .level-Write       { background-color: var(--level-Write); }
@@ -147,21 +163,14 @@
     padding: 0.5rem 0.75rem;
     border-left: 3px solid;
     border-radius: 0.25rem;
-    background: var(--bs-tertiary-bg);
+    background: var(--br-panel);
+    color: var(--br-ink);
 }
 
 .finding-error   { border-color: var(--bs-danger); }
 .finding-warning { border-color: var(--bs-warning); }
 .finding-info    { border-color: var(--bs-info); }
 
-/* Wraps because the Sid input, effect select and Remove button together
-   exceed a phone's width, and ms-auto on Remove pushed it past the viewport. */
-.statement-card .card-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-}
 
 .arn-segment {
     font-family: var(--bs-font-monospace);
@@ -548,22 +557,286 @@ td.description {
     color: var(--br-dim);
 }
 
-#pane-browse .scope-required {
-    font-family: var(--bs-font-monospace);
-    font-size: 0.75rem;
-    color: #f0b429;
-}
-
-#pane-browse .scope-optional,
-#pane-browse .scope-wildcard {
-    font-family: var(--bs-font-monospace);
-    font-size: 0.75rem;
-    color: var(--br-dim);
-}
 
 @media (prefers-reduced-motion: reduce) {
     #pane-browse .surface-seg {
         transition: none;
         animation: none;
     }
+}
+
+/* --- Generate tab ----------------------------------------------------------
+
+   Scoped to #pane-generate, the mirror of the Browse block above, and built from
+   the same vocabulary: the shared --br-* palette, .eyebrow section labels, the
+   .scope-* markers, and .svc-prefix's bordered mono tag. Almost nothing here is
+   a new idea -- it is the Browse tab's language applied to a builder instead of
+   a table, so the two tabs read as one product.
+
+   The same type rule governs: monospace for anything that is an IAM identifier
+   -- action names, ARNs, condition keys, the generated document -- and sans for
+   prose. Every input the user types an identifier into is monospace too, so what
+   they type matches what comes out.                                          */
+
+/* --- statement panels --- */
+
+#pane-generate .statement-card {
+    background: var(--br-panel);
+    border: 1px solid var(--br-rule);
+    border-radius: var(--bs-border-radius);
+    padding: 1rem;
+}
+
+/* Wraps because the Sid input, effect select and Remove button together exceed
+   a phone's width, and pushing Remove to the end once sent it past the
+   viewport. Ruled underneath like .svc-masthead, which does the same job on the
+   Browse tab: identity on the left, controls trailing. */
+#pane-generate .stmt-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.875rem;
+    border-bottom: 1px solid var(--br-rule);
+}
+
+/* "Statement 1" in .svc-prefix's box: on Browse that box holds the IAM prefix,
+   the thing a policy actually names, and here it holds the statement's identity
+   in the document being built. */
+#pane-generate .stmt-tag {
+    flex: none;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.35em 0.55em;
+    border: 1px solid var(--br-rule);
+    border-radius: 0.25rem;
+    color: var(--br-dim);
+}
+
+/* A Deny inverts the meaning of everything under it, and nothing else in the
+   panel says so once the effect select scrolls out of view. The tag is the one
+   thing always visible at the top of the statement, so it carries the signal --
+   alongside the select, never instead of it. */
+#pane-generate .statement-card.is-deny .stmt-tag {
+    border-color: var(--bs-danger);
+    color: var(--bs-danger);
+}
+
+#pane-generate .stmt-remove {
+    margin-inline-start: auto;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--br-dim);
+    background: transparent;
+    border: 1px solid var(--br-rule);
+    border-radius: 0.25rem;
+}
+
+#pane-generate .stmt-remove:hover:not(:disabled) {
+    color: var(--bs-danger);
+    border-color: var(--bs-danger);
+}
+
+#pane-generate .stmt-remove:disabled {
+    opacity: 0.4;
+}
+
+/* --- actions --- */
+
+/* Tabular figures so the count does not jitter as it climbs past 9 and 99 --
+   the same reason .svc-count uses them for the Browse action total. */
+#pane-generate .stmt-count {
+    font-family: var(--bs-font-monospace);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.75rem;
+    color: var(--br-ink);
+}
+
+/* One row per action, carrying the Browse action table's rhythm: a hairline
+   between rows and the same hover tint, so scanning a picker feels like
+   scanning the table. */
+#pane-generate .picker-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    margin: 0;
+    border-bottom: 1px solid var(--br-rule);
+}
+
+#pane-generate .picker-row:last-child {
+    border-bottom: 0;
+}
+
+#pane-generate .picker-row:hover {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+#pane-generate .picker-row .form-check-input {
+    flex: none;
+    margin: 0;
+    transform: translateY(0.15em);
+}
+
+#pane-generate .picker-name {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8125rem;
+    color: var(--br-ink);
+}
+
+#pane-generate .picker-desc {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--br-dim);
+}
+
+#pane-generate .picker-note {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8125rem;
+    color: var(--br-dim);
+}
+
+/* --- resources --- */
+
+#pane-generate .res-row {
+    border: 1px solid var(--br-rule);
+    border-radius: 0.25rem;
+    padding: 0.625rem;
+    margin-bottom: 0.5rem;
+}
+
+#pane-generate .res-type {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8125rem;
+    color: var(--br-ink);
+}
+
+/* --- output panel --- */
+
+#pane-generate .policy-size {
+    font-family: var(--bs-font-monospace);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.75rem;
+    color: var(--br-dim);
+}
+
+/* A managed policy is rejected above 6,144 non-whitespace characters, so the
+   count turns from a fact into a warning. */
+#pane-generate .policy-size.over-cap {
+    color: var(--bs-danger);
+    font-weight: 600;
+}
+
+/* --- controls --- */
+
+/* Bootstrap's controls default to a lighter surface than this pane; bring them
+   onto the panel fill so a field reads as part of the statement rather than
+   sitting on top of it. */
+#pane-generate .form-control,
+#pane-generate .form-select {
+    background-color: var(--bs-body-bg);
+    border-color: var(--br-rule);
+    color: var(--br-ink);
+}
+
+#pane-generate .form-control:focus,
+#pane-generate .form-select:focus {
+    border-color: var(--br-dim);
+    box-shadow: none;
+}
+
+#pane-generate .form-control::placeholder {
+    color: var(--br-dim);
+}
+
+/* Inputs holding an IAM identifier are monospace, so what is typed matches what
+   the preview and the document show. */
+#pane-generate input.arn-segment,
+#pane-generate textarea.arn-segment {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8125rem;
+}
+
+/* Quiet by default. Copy JSON is the one action worth colour, below. */
+#pane-generate .btn-quiet {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    color: var(--br-ink);
+    background: transparent;
+    border: 1px solid var(--br-rule);
+    border-radius: 0.25rem;
+}
+
+#pane-generate .btn-quiet:hover {
+    border-color: var(--br-dim);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+/* Copy JSON is the tab's primary action and should look it, but Bootstrap's
+   btn-primary blue is the only saturated hue on the page and reads as a
+   leftover. Weight and fill mark it instead -- no new colour family. */
+#pane-generate .btn-strong {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--br-ink);
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid var(--br-dim);
+    border-radius: 0.25rem;
+}
+
+#pane-generate .btn-strong:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: var(--br-ink);
+}
+
+/* The picker label is a flex child holding long action descriptions; without
+   this it refuses to shrink and pushes the scope marker out of the row. */
+#pane-generate .picker-row label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Text-only affordances -- "Select all shown", "Clear", the condition remove. */
+#pane-generate .btn-plain {
+    padding: 0;
+    font-size: 0.8125rem;
+    color: var(--br-dim);
+    background: transparent;
+    border: 0;
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+}
+
+#pane-generate .btn-plain:hover {
+    color: var(--br-ink);
+}
+
+/* The access-level filter row: the badge carries the colour, so the button
+   around it is only a hit target.
+
+   Selection is shown with a ring rather than by dimming the unselected ones.
+   Fading a badge fades its contrast with the label inside it, and those six
+   colours were picked to clear 4.5:1 -- an opacity that makes the control look
+   right would quietly undo the one thing layout.spec.mjs guards. */
+#pane-generate .level-filter {
+    padding: 0.15rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    line-height: 1;
+}
+
+#pane-generate .level-filter:hover {
+    border-color: var(--br-rule);
+}
+
+#pane-generate .level-filter.active {
+    border-color: var(--br-ink);
 }

@@ -220,7 +220,7 @@ test("generate: removing a statement renumbers the rest and keeps their state", 
     assert.equal(document.querySelectorAll(".statement-card").length, 2);
 
     // Remove the first; the second must survive intact and become "Statement 1".
-    const remove = document.querySelector(".statement-card .btn-outline-danger");
+    const remove = document.querySelector(".statement-card .stmt-remove");
     click(remove);
     await settle();
 
@@ -589,5 +589,34 @@ test("app: the CI badge reserves its space and points at the workflow", async ()
     assert.match(repo.getAttribute("href"), /github\.com\/[^/]+\/[^/]+$/);
     assert.match(repo.textContent.trim(), /View on GitHub/);
     assert.equal(repo.querySelector("svg").getAttribute("aria-hidden"), "true");
+    page.cleanup();
+});
+
+test("generate: switching a statement to Deny marks the panel", async () => {
+    // A Deny inverts the meaning of everything under it. The effect select
+    // scrolls out of view on a long statement, so the marker on the panel is
+    // what keeps that readable — and it is set from the change event, since the
+    // panel does not exist yet while its own header is being built.
+    const context = { partition: "aws", region: "us-east-1", account: "" };
+    const { page } = await boot("generate", context);
+    const { document } = page;
+
+    const card = document.querySelector(".statement-card");
+    assert.equal(card.classList.contains("is-deny"), false, "starts as an Allow");
+
+    const effect = card.querySelector("select");
+    change(Object.assign(effect, { value: "Deny" }));
+    await settle();
+
+    assert.ok(card.classList.contains("is-deny"), "the panel is marked");
+    assert.equal(
+        JSON.parse(document.getElementById("gen-output").textContent).Statement[0].Effect,
+        "Deny",
+        "and the document agrees",
+    );
+
+    change(Object.assign(effect, { value: "Allow" }));
+    await settle();
+    assert.equal(card.classList.contains("is-deny"), false, "and it clears again");
     page.cleanup();
 });
