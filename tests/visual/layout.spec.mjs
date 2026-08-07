@@ -209,17 +209,26 @@ test("every theme is declared, distinct, and legible on its own ground", async (
     //      nothing -- and the `:root` fallback is what hides it.
     //   2. Two themes resolve to the same ground, meaning one block's selector
     //      is misspelled and is not matching at all.
-    //   3. A palette lands text that cannot be read on its own surface. Checked
-    //      against the tokens rather than rendered elements because the contract
-    //      is the token pair: --br-dim has to work on --br-panel whether or not
-    //      anything happens to be painting that combination today.
+    //   3. A palette lands a colour that cannot be made out on its own surface.
+    //      Checked against the tokens rather than rendered elements because the
+    //      contract is the token pair: --br-dim has to work on --br-panel
+    //      whether or not anything happens to be painting that combination today.
+    //
+    // The two thresholds are WCAG's own. Text needs 4.5:1; a graphical object
+    // needs 3:1, which is what --br-info gets, since a finding's 3px stripe is
+    // the only thing it paints. --br-accent stays in the text group despite also
+    // being a stripe -- .scope-required sets it as type, so the stricter number
+    // is the one that binds.
     await page.goto("/");
+
+    const TEXT = ["--br-ink", "--br-dim", "--br-accent", "--br-danger"];
+    const GRAPHICAL = ["--br-info"];
 
     const measured = [];
     for (const { id } of THEMES) {
         measured.push(
             await page.evaluate(
-                ([theme, source]) => {
+                ([theme, source, text, graphical]) => {
                     document.documentElement.setAttribute("data-theme", theme);
                     const contrast = new Function(`return ${source}`)();
 
@@ -227,26 +236,28 @@ test("every theme is declared, distinct, and legible on its own ground", async (
                     const token = (name) => style.getPropertyValue(name).trim();
                     const [bg, panel] = [token("--br-bg"), token("--br-panel")];
 
+                    const against = (names, floor) =>
+                        names.flatMap((name) => [
+                            [`${name} on --br-bg`, contrast(token(name), bg), floor],
+                            [`${name} on --br-panel`, contrast(token(name), panel), floor],
+                        ]);
+
                     return {
                         theme,
                         bg,
-                        pairs: ["--br-ink", "--br-dim", "--br-accent", "--br-danger"].flatMap(
-                            (name) => [
-                                [`${name} on --br-bg`, contrast(token(name), bg)],
-                                [`${name} on --br-panel`, contrast(token(name), panel)],
-                            ],
-                        ),
+                        pairs: [...against(text, 4.5), ...against(graphical, 3)],
                     };
                 },
-                [id, CONTRAST_SOURCE],
+                [id, CONTRAST_SOURCE, TEXT, GRAPHICAL],
             ),
         );
     }
 
     for (const { theme, bg, pairs } of measured) {
         expect(bg, `${theme} declares --br-bg`).toMatch(/^#[0-9a-f]{6}$/i);
-        for (const [pair, ratio] of pairs) {
-            expect(ratio, `${theme}: ${pair} is ${ratio}:1`).toBeGreaterThanOrEqual(4.5);
+        for (const [pair, ratio, floor] of pairs) {
+            expect(ratio, `${theme}: ${pair} is ${ratio}:1, needs ${floor}:1`)
+                .toBeGreaterThanOrEqual(floor);
         }
     }
 

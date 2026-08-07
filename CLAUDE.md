@@ -165,9 +165,15 @@ captured and uploaded as CI artifacts but are never a pass/fail gate. Two coupli
 
 Two of those tests cover the theme layer specifically: one measures the six access-level badges
 in every theme, the other walks each theme's tokens and asserts the ground is declared, distinct
-from the other five, and legible under `--br-ink`, `--br-dim`, `--br-accent` and `--br-danger`.
-That second one is what fails when `theme.js` offers an id `app.css` never declares — a drift the
-`:root` fallback otherwise hides completely.
+from the other five, and legible against both `--br-bg` and `--br-panel`. That second one is what
+fails when `theme.js` offers an id `app.css` never declares — a drift the `:root` fallback
+otherwise hides completely.
+
+It holds two thresholds, which are WCAG's own: 4.5:1 for the tokens that land as text, 3:1 for
+`--br-info`, whose only job is a finding's 3px stripe. `--br-accent` is a stripe too but stays in
+the text group, because `.scope-required` also sets it as type — the stricter number binds. Moving
+a token between those two groups is the cheap way to make a failure go away, so the groups are
+named in the spec rather than inferred.
 
 Specs live under `tests/visual/` specifically so `node --test tests/*.test.mjs` does not pick
 them up.
