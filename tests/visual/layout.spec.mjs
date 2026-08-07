@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures.mjs";
+import { ACCESS_LEVELS } from "../../site/js/policy.js";
 
 /**
  * Layout and colour, in a real browser.
@@ -127,8 +128,13 @@ test("the dropdown paints above the content beneath it", async ({ page }) => {
 test("access-level badges clear WCAG AA against their text", async ({ page }) => {
     // The badge colours are hand-picked hex values. Nothing else stops a future
     // tweak from landing an unreadable one.
+    //
+    // glue, not a more obvious service, because it is the only one whose actions
+    // carry all six levels -- browsing anything else renders a subset and leaves
+    // the rest of the palette unmeasured. The completeness check below fails if
+    // that ever stops being true.
     await page.goto("/");
-    await pickService(page, "#browse-service", "eks");
+    await pickService(page, "#browse-service", "glue");
     await expect(page.locator("#browse-actions tbody tr").first()).toBeVisible();
 
     const ratios = await page.evaluate(() => {
@@ -151,7 +157,7 @@ test("access-level badges clear WCAG AA against their text", async ({ page }) =>
         return [...seen.entries()];
     });
 
-    expect(ratios.length).toBeGreaterThan(0);
+    expect(new Set(ratios.map(([level]) => level))).toEqual(new Set(ACCESS_LEVELS));
     for (const [level, ratio] of ratios) {
         expect(ratio, `${level} badge contrast ${ratio}:1`).toBeGreaterThanOrEqual(4.5);
     }

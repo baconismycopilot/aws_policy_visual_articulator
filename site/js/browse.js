@@ -10,7 +10,7 @@
 
 import { loadIndex, loadService } from "./data.js";
 import { ACCESS_LEVELS, canScope, hasAccessLevel, mustScope } from "./policy.js";
-import { accessLevelBadge, accessLevelBadges, el, render, table } from "./dom.js";
+import { accessLevelBadges, el, render, table } from "./dom.js";
 import { combobox } from "./combobox.js";
 
 const DOCS_BASE = "https://docs.aws.amazon.com/service-authorization/latest/reference/";
@@ -27,6 +27,8 @@ export async function initBrowse() {
     ui.actions = document.getElementById("browse-actions");
     ui.count = document.getElementById("browse-action-count");
     ui.docLink = document.getElementById("browse-doc-link");
+    ui.svcName = document.getElementById("browse-svc-name");
+    ui.svcPrefix = document.getElementById("browse-svc-prefix");
 
     const index = await loadIndex();
 
@@ -69,10 +71,15 @@ function docUrl(svc, actionName) {
 }
 
 function drawService() {
+    ui.svcName.textContent = service.service_name;
+    ui.svcPrefix.textContent = service.prefix;
+
     const url = docUrl(service, null);
     if (url) {
         ui.docLink.href = url;
-        ui.docLink.textContent = `${service.service_name} reference ↗`;
+        // The service is named in the masthead directly above, so the link only
+        // has to say where it goes.
+        ui.docLink.textContent = "Reference \u2197\uFE0E";
         ui.docLink.classList.remove("d-none");
     } else {
         ui.docLink.classList.add("d-none");
@@ -82,27 +89,56 @@ function drawService() {
     drawActions();
 }
 
+/**
+ * The permission surface: one segment per access level, sized by how many of
+ * the service's actions carry it, and doubling as the filter control.
+ *
+ * The counts sum to more than the action total, because ~1,050 actions carry
+ * two levels ("Tagging, Write"). That makes this a distribution of level
+ * assignments rather than a partition of the actions, which is the honest thing
+ * to show — a Write segment covering half the strip means half of what this
+ * service can do is a write, whether or not those actions also tag.
+ */
 function drawLevelFilters() {
-    const buttons = ACCESS_LEVELS.map((level) => ({
+    const segments = ACCESS_LEVELS.map((level) => ({
         level,
         count: (service.actions || []).filter((a) => hasAccessLevel(a, level)).length,
     }))
         .filter(({ count }) => count > 0)
-        .map(({ level, count }) =>
-            el("button", {
+        .map(({ level, count }) => {
+            const label = `${level} — ${count} ${count === 1 ? "action" : "actions"}`;
+
+            return el("button", {
                 type: "button",
-                className: "btn btn-sm btn-outline-secondary",
+                className: "surface-seg",
+                // Matches accessLevelBadge's slug, so a segment and the badges
+                // in the rows beneath it are always the same colour.
+                style: `--seg: var(--level-${level.split(" ")[0]}); flex-grow: ${count}`,
                 dataset: { level },
+                "aria-pressed": "false",
+                // The visible label is dropped on narrow segments, and a title
+                // does not name a button that already has text -- without this,
+                // the accessible name collapses to the bare count.
+                "aria-label": label,
+                title: label,
                 onclick: (event) => {
                     if (activeLevels.has(level)) activeLevels.delete(level);
                     else activeLevels.add(level);
-                    event.currentTarget.classList.toggle("active", activeLevels.has(level));
+
+                    const on = activeLevels.has(level);
+                    event.currentTarget.classList.toggle("active", on);
+                    event.currentTarget.setAttribute("aria-pressed", String(on));
+                    ui.levels.classList.toggle("filtering", activeLevels.size > 0);
                     drawActions();
                 },
-            }, [accessLevelBadge(level), el("span", { textContent: ` ${count}` })]),
-        );
+            }, [
+                el("span", { className: "seg-label", textContent: level }),
+                el("span", { className: "seg-count", textContent: String(count) }),
+            ]);
+        });
 
-    render(ui.levels, ...buttons);
+    ui.levels.classList.remove("filtering");
+    render(ui.levels, ...segments);
 }
 
 function matchingActions() {
@@ -129,14 +165,14 @@ function scopeCell(action) {
             .filter((rt) => rt.required && rt.resource_type)
             .map((rt) => rt.resource_type);
         return el("span", {
-            className: "text-warning",
+            className: "scope-required",
             textContent: `required: ${types.join(", ")}`,
         });
     }
     if (canScope(action)) {
-        return el("span", { className: "text-secondary", textContent: "optional" });
+        return el("span", { className: "scope-optional", textContent: "optional" });
     }
-    return el("span", { className: "text-secondary", textContent: '"*" only' });
+    return el("span", { className: "scope-wildcard", textContent: '"*" only' });
 }
 
 function actionCell(action) {
@@ -157,8 +193,17 @@ function actionCell(action) {
 }
 
 function drawActions() {
+    // The filter input is live from page load, but no service is loaded until a
+    // selection lands -- and onSelect puts us back here when the combobox clears.
+    if (!service) return;
+
     const actions = matchingActions();
-    ui.count.textContent = `${actions.length} of ${service.actions.length}`;
+    // "180" while unfiltered; "27 of 180" once something narrows it. Showing
+    // "180 of 180" spends two numbers saying nothing.
+    ui.count.textContent =
+        actions.length === service.actions.length
+            ? String(actions.length)
+            : `${actions.length} of ${service.actions.length}`;
 
     const rows = actions.map((action) =>
         el("tr", {}, [
@@ -166,7 +211,7 @@ function drawActions() {
             el("td", {}, [accessLevelBadges(action.access_levels)]),
             el("td", {}, [scopeCell(action)]),
             el("td", {
-                className: "description text-secondary",
+                className: "description",
                 textContent: action.description || "—",
             }),
         ]),
