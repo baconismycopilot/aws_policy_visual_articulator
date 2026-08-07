@@ -38,10 +38,19 @@ function resolve(url) {
     return fromRoot(`node_modules/${pkg}/${file}`);
 }
 
+/* The navbar chip asks GitHub whether CI is green. Left unrouted it would put a
+   live network call in a required gate and make the chip's rendered width depend
+   on the answer -- "CI" when offline, "CI · passing" when not -- so a width
+   assertion would pass or fail on the state of the repo. Pinned to success. */
+const CI_RUNS = { workflow_runs: [{ conclusion: "success" }] };
+
 export const test = base.extend({
     page: async ({ page }, use) => {
         await page.route("https://cdn.jsdelivr.net/**", (route) =>
             route.fulfill({ path: resolve(route.request().url()) }),
+        );
+        await page.route("https://api.github.com/**", (route) =>
+            route.fulfill({ json: CI_RUNS }),
         );
         await use(page);
     },

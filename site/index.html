@@ -14,17 +14,20 @@
     <div class="container-fluid">
         <span class="navbar-brand h4 mb-0">AWS Policy Visual Articulator</span>
 
-        <div class="d-flex flex-wrap gap-2 align-items-center ms-auto context-bar">
-            <label class="form-label mb-0 small text-secondary">Partition</label>
-            <select id="ctx-partition" class="form-select form-select-sm w-auto"></select>
+        <div class="d-flex align-items-center gap-3 ms-auto">
+            <!-- Ships in the unknown state and is upgraded once the API answers,
+                 so a blocked or throttled request leaves a dim chip rather than
+                 a missing one. -->
+            <a id="ci-status" class="status-chip eyebrow"
+               href="https://github.com/baconismycopilot/aws_policy_visual_articulator/actions/workflows/ci.yml"
+               target="_blank" rel="noopener" title="Build status unavailable">
+                <span class="status-dot" aria-hidden="true"></span>
+                <span id="ci-status-text">CI</span>
+            </a>
 
-            <label class="form-label mb-0 small text-secondary">Region</label>
-            <input id="ctx-region" class="form-control form-control-sm w-auto"
-                   value="us-east-1" spellcheck="false">
-
-            <label class="form-label mb-0 small text-secondary">Account</label>
-            <input id="ctx-account" class="form-control form-control-sm w-auto"
-                   placeholder="111122223333" spellcheck="false">
+            <a class="repo-link eyebrow"
+               href="https://github.com/baconismycopilot/aws_policy_visual_articulator"
+               target="_blank" rel="noopener">GitHub&nbsp;&#8599;</a>
         </div>
     </div>
 </nav>
@@ -98,6 +101,34 @@
 
         <!-- ── Generate ───────────────────────────────────────────────────── -->
         <div class="tab-pane fade" id="pane-generate" role="tabpanel">
+            <div class="context-band">
+                <div class="eyebrow mb-2">Account context</div>
+
+                <!-- Each label is paired with its control in its own flex item, so a
+                     narrow viewport wraps between the three pairs and never between a
+                     label and the box it names. -->
+                <div class="d-flex flex-wrap gap-3 align-items-center context-bar">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small text-secondary" for="ctx-partition">Partition</label>
+                        <select id="ctx-partition" class="form-select form-select-sm w-auto"></select>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small text-secondary" for="ctx-region">Region</label>
+                        <input id="ctx-region" class="form-control form-control-sm w-auto"
+                               value="us-east-1" spellcheck="false">
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small text-secondary" for="ctx-account">Account</label>
+                        <input id="ctx-account" class="form-control form-control-sm w-auto"
+                               placeholder="111122223333" spellcheck="false">
+                    </div>
+                </div>
+
+                <div id="ctx-arn" class="context-arn"></div>
+            </div>
+
             <div class="row g-3">
                 <div class="col-lg-7">
                     <div class="d-flex flex-wrap gap-3 align-items-end mb-3">

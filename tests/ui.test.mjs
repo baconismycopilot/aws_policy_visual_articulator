@@ -12,11 +12,28 @@ import assert from "node:assert/strict";
 
 import { byText, change, click, mousedown, settle, setupPage, type } from "./harness.mjs";
 
+let nonce = 0;
+
+/**
+ * Boot the whole app the way the browser does, through app.js.
+ *
+ * The per-tab `boot` below calls initBrowse/initGenerate directly, which skips
+ * everything app.js owns — the context bar wiring and the status chip among it.
+ * app.js runs `main()` on import, so there is nothing to call: import it and let
+ * the awaited fetches settle.
+ */
+async function bootApp() {
+    const page = setupPage();
+    await import(`../site/js/app.js?t=${nonce++}`);
+    await settle();
+    await settle();
+    return page;
+}
+
 /**
  * Boot a tab. Modules hold module-level state, so each test imports them fresh
  * with a cache-busting query — otherwise tab two inherits tab one's DOM refs.
  */
-let nonce = 0;
 async function boot(which, context) {
     const page = setupPage();
     const bust = `?t=${nonce++}`;
@@ -502,5 +519,62 @@ test("generate: wildcard-only actions are split out of a scoped statement", asyn
         /separate statement/,
         "the split is explained in the checks panel",
     );
+    page.cleanup();
+});
+
+// --- App shell: context placement and the status chip -------------------------
+
+test("app: the account context belongs to Generate, not the navbar", async () => {
+    // The reason for the move. The controls sat in the navbar, which read as a
+    // page-wide scope, but nothing on Browse has ever consumed them: initBrowse
+    // takes no context and the change handler only refreshes Generate.
+    const page = await bootApp();
+    const { document } = page;
+
+    for (const id of ["ctx-partition", "ctx-region", "ctx-account", "ctx-arn"]) {
+        const node = document.getElementById(id);
+        assert.ok(node, `#${id} exists`);
+        assert.ok(node.closest("#pane-generate"), `#${id} sits inside the Generate pane`);
+    }
+
+    assert.equal(
+        document.querySelector("nav .form-select, nav .form-control"),
+        null,
+        "no context inputs are left in the navbar",
+    );
+    page.cleanup();
+});
+
+test("app: the context band echoes the ARN the fields build", async () => {
+    const page = await bootApp();
+    const { document } = page;
+    const echo = () => document.getElementById("ctx-arn").textContent;
+
+    // Rendered before the first keystroke. An unset account wildcards to `*`,
+    // the same rule renderArn applies to the previews inside a statement — the
+    // echo would misrepresent the output if it invented its own convention.
+    assert.match(echo(), /^arn:aws:/, `echoed on load: ${echo()}`);
+    assert.match(echo(), /:\*:⟨resource⟩$/, `an unset account wildcards: ${echo()}`);
+
+    type(document.getElementById("ctx-account"), "111122223333");
+    await settle();
+    assert.match(echo(), /:111122223333:/, `the echo follows the field: ${echo()}`);
+
+    type(document.getElementById("ctx-region"), "eu-west-2");
+    await settle();
+    assert.match(echo(), /:eu-west-2:/, `region too: ${echo()}`);
+    page.cleanup();
+});
+
+test("app: the CI chip degrades to unknown when the status cannot be fetched", async () => {
+    // The harness fetch stub resolves paths against site/, so an https URL falls
+    // into its catch and comes back !ok — which is exactly the offline path.
+    const page = await bootApp();
+    const chip = page.document.getElementById("ci-status");
+
+    assert.ok(chip, "the chip is in the markup");
+    assert.equal(chip.classList.contains("status-ok"), false);
+    assert.equal(chip.classList.contains("status-fail"), false);
+    assert.equal(page.document.getElementById("ci-status-text").textContent, "CI");
     page.cleanup();
 });

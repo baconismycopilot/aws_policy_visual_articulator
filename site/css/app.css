@@ -1,5 +1,68 @@
+/* The account context is Generate's alone -- nothing on the Browse tab reads it
+   -- so it sits in a band at the top of that pane rather than in the navbar,
+   where it used to imply a page-wide scope it never had. Ruled off below to
+   separate the settings from the builder, matching .svc-masthead's rule. */
+.context-band {
+    padding-bottom: 0.875rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--br-rule);
+}
+
 .context-bar input {
     max-width: 10rem;
+}
+
+/* The three fields are abstract until you see what they produce, so the band
+   echoes the ARN they build. It wears .arn-preview's type (grouped into that
+   rule below) but keeps its own class: several tests reach for the first
+   .arn-preview on the page meaning the preview under a resource row, and this
+   element sits above those in the DOM. */
+.context-arn {
+    margin-top: 0.625rem;
+}
+
+/* --- navbar: repo link and build status ---------------------------------
+
+   The chip borrows .svc-prefix's box (hairline rule, 0.25rem radius) and wears
+   .eyebrow for its type, so it reads as part of the same surface as the rest of
+   the app instead of as an imported badge. The dot is decorative: the state is
+   in the text, so it survives colour blindness and a screen reader alike. */
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.3em 0.5em;
+    border: 1px solid var(--br-rule);
+    border-radius: 0.25rem;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.status-dot {
+    flex: none;
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* Unknown is the default the markup ships with: the chip renders dim before the
+   status arrives, and stays dim if it never does. */
+.status-ok   .status-dot { background: var(--bs-success); }
+.status-fail .status-dot { background: var(--bs-danger); }
+
+.repo-link {
+    text-decoration: none;
+}
+
+.status-chip:hover,
+.repo-link:hover {
+    color: var(--br-ink);
+}
+
+.status-chip:hover {
+    border-color: var(--br-dim);
 }
 
 .sticky-panel {
@@ -57,6 +120,26 @@
     --level-Tagging:     #4c1d95;
     --level-Permissions: #9f1239;
     --level-Unknown:     #44403c;
+
+    /* The Browse tab's palette, shared: the navbar status chip and the Generate
+       tab's context band are built from the same four values so the three read
+       as one surface. Declared once here rather than per-pane -- a `#pane-browse`
+       copy would outrank this one and the two would drift apart unnoticed. */
+    --br-panel: #161c24;
+    --br-rule:  #242e3a;
+    --br-ink:   #e8eef5;
+    --br-dim:   #8d9bab;
+}
+
+/* Monospace, tracked and uppercase: the label above a band of controls. Shared
+   by both tabs -- see the type note above the Browse section. */
+.eyebrow {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--br-dim);
 }
 
 .level-Read        { background-color: var(--level-Read); }
@@ -92,7 +175,8 @@
     font-size: 0.8125rem;
 }
 
-.arn-preview {
+.arn-preview,
+.context-arn {
     font-family: var(--bs-font-monospace);
     font-size: 0.75rem;
     color: var(--bs-secondary-color);
@@ -192,30 +276,15 @@ td.description {
 
 /* --- Browse tab ------------------------------------------------------------
 
-   Scoped to #pane-browse throughout: app.css is shared with Generate, and the
-   only things both tabs are meant to agree on are the access-level colours and
-   the combobox above.
+   Scoped to #pane-browse from here down: app.css is shared with Generate, and
+   what the two tabs agree on is deliberately small -- the --br-* palette, the
+   .eyebrow label, the access-level colours and the combobox, all above. Layout
+   below this line is the Browse tab's alone.
 
    The type is monospace where the content is an IAM identifier and sans where
    it is prose. That inversion of the usual pairing is the point: an action name
    and an ARN are the artifacts this page exists to show, so they get the
    display role, and descriptions stay in the reading face.                   */
-
-#pane-browse {
-    --br-panel: #161c24;
-    --br-rule: #242e3a;
-    --br-ink: #e8eef5;
-    --br-dim: #8d9bab;
-}
-
-#pane-browse .eyebrow {
-    font-family: var(--bs-font-monospace);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--br-dim);
-}
 
 #pane-browse .browse-controls {
     margin-bottom: 1.5rem;

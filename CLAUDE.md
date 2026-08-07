@@ -48,9 +48,15 @@ split along a strict line:
   with `createElement`/`textContent` and never `innerHTML` — action descriptions and ARN
   templates come from upstream JSON and land in the page verbatim.
 
-`data.js` is the only fetch path: `index.json` loads once, a service shard is fetched on
-selection and memoized for the session. `app.js` owns the shared account context
-(partition/region/account), persists it to `localStorage`, and both tabs render ARNs against it.
+`data.js` is the only fetch path for the dataset: `index.json` loads once, a service shard is
+fetched on selection and memoized for the session. (`status.js` is the one other fetch in the
+app — the navbar's CI chip — and it is failure-tolerant by design, never blocking a page load.)
+
+`app.js` owns the account context (partition/region/account) and persists it to `localStorage`,
+but the context is **Generate's alone**: `initBrowse()` takes no context and the change handler
+only calls `refreshGenerate()`. The Browse tab shows action names, not ARNs. The controls live in
+a band at the top of `#pane-generate` for that reason — they were in the navbar, where the
+placement implied a page-wide scope the code never had.
 
 ### Data model invariants
 
