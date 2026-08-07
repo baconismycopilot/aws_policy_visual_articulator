@@ -421,6 +421,62 @@ test("a dependent action satisfied only by a Deny still counts as missing", () =
     assert.deepEqual(fixable.fix.actions, ["iam:PassRole"]);
 });
 
+// --- duplicate Sids -----------------------------------------------------------
+
+const sidErrors = (statements) =>
+    validate("IAMPolicy", statements, getService).filter(
+        (f) => f.level === "error" && f.message.startsWith("Sid "),
+    );
+
+test("two statements sharing a Sid are an error", () => {
+    const dupes = sidErrors([statement({ sid: "Foo" }), statement({ sid: "Foo" })]);
+
+    assert.equal(dupes.length, 1);
+    assert.equal(dupes[0].statement, 1, "reported against the later statement");
+    assert.match(dupes[0].message, /already used by statement 1/);
+});
+
+test("every statement after the first duplicate is flagged", () => {
+    const dupes = sidErrors([
+        statement({ sid: "X" }),
+        statement({ sid: "X" }),
+        statement({ sid: "X" }),
+    ]);
+
+    assert.deepEqual(dupes.map((f) => f.statement), [1, 2]);
+});
+
+test("Sids differing only in punctuation collide once emitted", () => {
+    // sanitizeSid strips everything outside [A-Za-z0-9], so these are one Sid by
+    // the time they reach the document even though the fields differ. Case is
+    // preserved, so "Read objects" would *not* collide -- only the space goes.
+    assert.equal(sidErrors([statement({ sid: "Read Objects" }), statement({ sid: "ReadObjects" })]).length, 1);
+    assert.equal(sidErrors([statement({ sid: "Read objects" }), statement({ sid: "ReadObjects" })]).length, 0);
+});
+
+test("empty Sids do not collide with each other", () => {
+    // An empty Sid is omitted from the document, so any number of them is fine.
+    assert.deepEqual(sidErrors([statement({}), statement({}), statement({})]), []);
+});
+
+test("the Sid a resource-scope split invents is checked too", () => {
+    // A split statement emits both "Foo" and "FooAnyResource". On its own that
+    // is two distinct Sids; against a hand-written "FooAnyResource" it is not,
+    // and nothing in the editable statements shows the clash.
+    const splitting = statement({
+        sid: "Foo",
+        actions: [REQUIRES_RESOURCE.name, WILDCARD_ONLY.name],
+        anyResource: false,
+        resources: [{ template: "arn:aws:s3:::bucket/*", values: {} }],
+    });
+
+    assert.deepEqual(sidErrors([splitting]), [], "a split alone invents no clash");
+
+    const clash = sidErrors([splitting, statement({ sid: "FooAnyResource" })]);
+    assert.equal(clash.length, 1);
+    assert.match(clash[0].message, /"FooAnyResource"/);
+});
+
 test("a service wildcard covers the dependent actions it grants", () => {
     const findings = validate("IAMPolicy", [
         statement({ servicePrefix: "access-analyzer", actions: ["StartPolicyGeneration"] }),

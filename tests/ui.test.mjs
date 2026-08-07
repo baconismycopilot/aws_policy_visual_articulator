@@ -320,6 +320,35 @@ test("generate: the dependent-action fix cannot be applied twice", async () => {
     page.cleanup();
 });
 
+test("generate: two statements given the same Sid raise an error", async () => {
+    const context = { partition: "aws", region: "us-east-1", account: "" };
+    const { page } = await boot("generate", context);
+    const { document } = page;
+
+    click(document.getElementById("gen-add-statement"));
+    await settle();
+
+    const sids = document.querySelectorAll('#gen-statements input[placeholder="Sid (optional)"]');
+    assert.equal(sids.length, 2, "both statements offer a Sid field");
+    type(sids[0], "ReadOnly");
+    type(sids[1], "ReadOnly");
+    await settle();
+
+    const error = byText(document.getElementById("gen-findings"), ".finding-error", "Sid");
+    assert.ok(error, "the duplicate is reported");
+    assert.match(error.textContent, /Statement 2: .*already used by statement 1/);
+
+    // Renaming one clears it -- the finding tracks the field, not a first sighting.
+    type(sids[1], "WriteOnly");
+    await settle();
+    assert.equal(
+        byText(document.getElementById("gen-findings"), ".finding-error", "Sid"),
+        undefined,
+        "the error clears once the Sids differ",
+    );
+    page.cleanup();
+});
+
 test("generate: checking an action leaves the picker scroll position alone", async () => {
     // The picker is deliberately not re-rendered on toggle; only the resource
     // and condition sections below it are.
