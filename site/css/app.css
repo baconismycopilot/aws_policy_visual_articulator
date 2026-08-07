@@ -58,8 +58,8 @@
     display: block;
 }
 
-/* Three items on one line overrun a phone: the badge is 90px, "View on GitHub"
-   about 120, and the theme select another 150. Wrapping is the honest fix --
+/* The tools overrun a phone on one line: the badge is 90px, "View on GitHub"
+   about 120, and the theme pair another 230. Wrapping is the honest fix --
    fixing it by hiding the labels would cost more than the second line does. */
 .navbar-tools {
     display: flex;
@@ -68,18 +68,20 @@
     gap: 0.5rem 1rem;
 }
 
+/* Tighter than .navbar-tools' gap: these two selects are one control, and
+   spacing them like siblings of the repo link would read as three tools. */
 .theme-picker {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.375rem;
 }
 
-/* Narrow enough that the navbar still fits one line on a laptop, wide enough
-   for "Parchment Light" -- the longest of the seven -- not to be truncated. */
-.theme-picker select {
-    width: auto;
-    min-width: 9.5rem;
-}
+/* Sized to their own longest option -- "Parchment" and "System" -- rather than
+   to each other. Matching them would widen the mode select by a third for
+   nothing, and the pair has to share a phone's width with the repo link. */
+#theme-family { width: 7.5rem; }
+#theme-mode   { width: 6.5rem; }
 
 .sticky-panel {
     position: sticky;

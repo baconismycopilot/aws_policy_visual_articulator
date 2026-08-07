@@ -269,7 +269,8 @@ test("the picker applies a theme and remembers it across a reload", async ({ pag
     await page.goto("/");
 
     const root = page.locator("html");
-    await page.locator("#theme-select").selectOption("carbon-light");
+    await page.locator("#theme-family").selectOption("carbon");
+    await page.locator("#theme-mode").selectOption("light");
     await expect(root).toHaveAttribute("data-theme", "carbon-light");
     await expect(root).toHaveAttribute("data-bs-theme", "light");
 
@@ -279,7 +280,51 @@ test("the picker applies a theme and remembers it across a reload", async ({ pag
     // land this attribute only after the first paint, and the reload would flash
     // the dark ground before turning white.
     await expect(root).toHaveAttribute("data-theme", "carbon-light");
-    await expect(page.locator("#theme-select")).toHaveValue("carbon-light");
+    await expect(page.locator("#theme-family")).toHaveValue("carbon");
+    await expect(page.locator("#theme-mode")).toHaveValue("light");
+});
+
+test("following the OS keeps the chosen palette", async ({ page }) => {
+    // The point of splitting the picker in two, and the one part jsdom cannot
+    // reach — it has no media queries, so the unit suite stubs a fixed answer.
+    // Here the scheme is real and can be changed underneath a loaded page.
+    await page.goto("/");
+    await page.locator("#theme-family").selectOption("parchment");
+
+    const root = page.locator("html");
+
+    // The suite runs dark (see playwright.config.mjs), so Parchment on System
+    // starts dark.
+    await expect(root).toHaveAttribute("data-theme", "parchment-dark");
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(root).toHaveAttribute("data-theme", "parchment-light");
+    await expect(root).toHaveAttribute("data-bs-theme", "light");
+    await expect(page.locator("#theme-family")).toHaveValue("parchment");
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(root).toHaveAttribute("data-theme", "parchment-dark");
+
+    // And the same across a reload, which is the pre-paint script's copy of the
+    // rule rather than the module's.
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.reload();
+    await expect(root).toHaveAttribute("data-theme", "parchment-light");
+});
+
+test("a preference from the single-select picker still resolves", async ({ page }) => {
+    // "system" is what it wrote for "follow the OS". Read as a `<family>-<mode>`
+    // preference it parses as nothing, so without the migration a returning
+    // visitor on a light desktop would be pinned to dark — in both the module
+    // and the pre-paint script, which carry the rule separately.
+    await page.goto("/");
+    await page.evaluate(() => localStorage.setItem("apva.theme", "system"));
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.reload();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "slate-light");
+    await expect(page.locator("#theme-mode")).toHaveValue("system");
 });
 
 test("action links are distinguishable from plain table text", async ({ page }) => {

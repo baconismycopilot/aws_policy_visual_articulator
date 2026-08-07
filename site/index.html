@@ -11,12 +11,12 @@
          one on every reload.
 
          Deliberately duplicated rather than imported, and kept to the one thing
-         that has to happen early. It knows no palette and no list of themes --
-         the mode is read off the id's suffix, which is why theme.js requires
-         every id to end in `-light` or `-dark`. An id this script does not
-         recognise still lands on the element; app.css falls back to Slate Dark
-         for any unknown value, and theme.js normalises the stored entry a tick
-         later. -->
+         that has to happen early. It knows no palette, no family and no mode --
+         a stored preference is `<family>-<mode>`, so resolving one is swapping a
+         `-system` suffix for what the OS reports and reading the mode back off
+         the result. A value this script cannot make sense of still lands on the
+         element; app.css falls back to Slate Dark for any unknown data-theme,
+         and theme.js normalises the stored entry a tick later. -->
     <script>
         (function () {
             var stored = null;
@@ -25,9 +25,13 @@
             } catch (e) {
                 // Storage blocked; fall through to the OS preference.
             }
-            var id = stored && stored !== "system"
-                ? stored
-                : (matchMedia("(prefers-color-scheme: light)").matches ? "slate-light" : "slate-dark");
+            // "system" is what the single-select picker wrote before the family
+            // and the mode were separable.
+            if (!stored || stored === "system") stored = "slate-system";
+
+            var dark = !matchMedia("(prefers-color-scheme: light)").matches;
+            var id = stored.replace(/-system$/, dark ? "-dark" : "-light");
+
             document.documentElement.setAttribute("data-theme", id);
             document.documentElement.setAttribute(
                 "data-bs-theme", /-dark$/.test(id) ? "dark" : "light");
@@ -47,12 +51,19 @@
         <span class="navbar-brand h4 mb-0">AWS Policy Visual Articulator</span>
 
         <div class="navbar-tools ms-auto">
-            <div class="theme-picker">
-                <label class="eyebrow mb-0" for="theme-select">Theme</label>
-                <!-- Filled by theme.js: the option list is derived from the same
-                     table that resolves an id, so a theme cannot be offered
-                     without existing. -->
-                <select id="theme-select" class="form-select form-select-sm"></select>
+            <!-- Two controls rather than one list of six, so following the OS
+                 does not cost you the choice of palette. A group rather than a
+                 <label>, since the eyebrow names the pair; each select carries
+                 its own accessible name. -->
+            <div class="theme-picker" role="group" aria-labelledby="theme-label">
+                <span class="eyebrow" id="theme-label">Theme</span>
+                <!-- Filled by theme.js from the same tables that resolve a
+                     preference, so neither control can offer something that
+                     does not exist. -->
+                <select id="theme-family" class="form-select form-select-sm"
+                        aria-label="Theme palette"></select>
+                <select id="theme-mode" class="form-select form-select-sm"
+                        aria-label="Theme mode"></select>
             </div>
 
             <!-- width/height are the badge's own intrinsic size: they reserve the
