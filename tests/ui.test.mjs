@@ -537,8 +537,11 @@ test("app: the account context belongs to Generate, not the navbar", async () =>
         assert.ok(node.closest("#pane-generate"), `#${id} sits inside the Generate pane`);
     }
 
+    // Hooked on the ids rather than on `.form-select`: the navbar does hold one
+    // select now, the theme picker, and that one belongs there — the theme is
+    // page-wide in a way the account context never was.
     assert.equal(
-        document.querySelector("nav .form-select, nav .form-control"),
+        document.querySelector("nav #ctx-partition, nav #ctx-region, nav #ctx-account"),
         null,
         "no context inputs are left in the navbar",
     );
@@ -618,5 +621,91 @@ test("generate: switching a statement to Deny marks the panel", async () => {
     change(Object.assign(effect, { value: "Allow" }));
     await settle();
     assert.equal(card.classList.contains("is-deny"), false, "and it clears again");
+    page.cleanup();
+});
+
+// --- Theme picker ------------------------------------------------------------
+
+/**
+ * A page with the theme module freshly imported, optionally with a preference
+ * already in storage — which has to be seeded before `initTheme` reads it, so
+ * `bootApp` is no use here.
+ */
+async function bootTheme(stored) {
+    const page = setupPage();
+    if (stored !== undefined) page.window.localStorage.setItem("apva.theme", stored);
+
+    const theme = await import(`../site/js/theme.js?t=${nonce++}`);
+    theme.initTheme();
+    return { page, theme };
+}
+
+test("theme: the picker offers System and every theme, and defaults to System", async () => {
+    // Through app.js, so this also covers the wiring: initTheme has to be called
+    // on the shell's own path, not only when a test reaches for the module.
+    const page = await bootApp();
+    const select = page.document.getElementById("theme-select");
+
+    assert.ok(select, "the picker is in the markup");
+
+    const { THEMES } = await import("../site/js/theme.js");
+    assert.deepEqual(
+        [...select.options].map((o) => o.value),
+        ["system", ...THEMES.map((t) => t.id)],
+        "System leads, then every theme the CSS declares",
+    );
+    assert.equal(select.value, "system", "an untouched visitor follows the OS");
+    page.cleanup();
+});
+
+test("theme: choosing one stamps both attributes and remembers it", async () => {
+    const { page } = await bootTheme();
+    const root = page.document.documentElement;
+    const select = page.document.getElementById("theme-select");
+
+    select.value = "parchment-light";
+    change(select);
+
+    assert.equal(root.getAttribute("data-theme"), "parchment-light");
+    assert.equal(
+        root.getAttribute("data-bs-theme"),
+        "light",
+        "Bootstrap's chrome is put in the same mode, or its form-select chevron " +
+            "stays the wrong colour",
+    );
+    assert.equal(page.window.localStorage.getItem("apva.theme"), "parchment-light");
+    page.cleanup();
+});
+
+test("theme: every id agrees with the mode its suffix advertises", async () => {
+    // index.html's pre-paint script derives data-bs-theme from the suffix alone,
+    // having no access to this table. An id that disagreed with its own mode
+    // would paint one theme before the module loads and another after.
+    const { THEMES } = await import("../site/js/theme.js");
+
+    for (const { id, mode } of THEMES) {
+        assert.ok(
+            id.endsWith(`-${mode}`),
+            `${id} must end in -${mode} for the pre-paint script to read it`,
+        );
+    }
+});
+
+test("theme: a stored value naming no theme falls back rather than being stamped", async () => {
+    // A hand-edited entry, or an id from a build where the themes were named
+    // differently. Stamping it would leave data-theme matching no block.
+    const { page } = await bootTheme("vaporwave");
+    const root = page.document.documentElement;
+
+    assert.equal(root.getAttribute("data-theme"), "slate-dark", "resolved, not echoed");
+    assert.equal(page.document.getElementById("theme-select").value, "system");
+    page.cleanup();
+});
+
+test("theme: a remembered choice survives the reload", async () => {
+    const { page } = await bootTheme("carbon-dark");
+
+    assert.equal(page.document.documentElement.getAttribute("data-theme"), "carbon-dark");
+    assert.equal(page.document.getElementById("theme-select").value, "carbon-dark");
     page.cleanup();
 });

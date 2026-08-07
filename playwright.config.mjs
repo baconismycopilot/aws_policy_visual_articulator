@@ -26,6 +26,13 @@ export default defineConfig({
         baseURL: ORIGIN,
         trace: "on-first-retry",
         screenshot: "only-on-failure",
+
+        // The page's default theme follows the OS, so without this the whole
+        // suite would render in whatever colour scheme the browser happens to
+        // report -- and the captured screenshots would silently change meaning.
+        // Pinned to dark, the palette the page has always shipped; the theme
+        // tests in layout.spec.mjs cycle all six explicitly.
+        colorScheme: "dark",
     },
 
     projects: [

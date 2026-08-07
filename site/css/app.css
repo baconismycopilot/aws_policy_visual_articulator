@@ -58,6 +58,29 @@
     display: block;
 }
 
+/* Three items on one line overrun a phone: the badge is 90px, "View on GitHub"
+   about 120, and the theme select another 150. Wrapping is the honest fix --
+   fixing it by hiding the labels would cost more than the second line does. */
+.navbar-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.theme-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Narrow enough that the navbar still fits one line on a laptop, wide enough
+   for "Parchment Light" -- the longest of the seven -- not to be truncated. */
+.theme-picker select {
+    width: auto;
+    min-width: 9.5rem;
+}
+
 .sticky-panel {
     position: sticky;
     top: 1rem;
@@ -98,13 +121,40 @@
     padding: 0.15em 0.45em;
 }
 
-/* Access levels are the primary way to read a permission set at a glance, so
-   they get consistent colours everywhere they appear. Held as custom properties
-   because the Browse tab's permission-surface strip paints the same six hues at
-   full width -- one source of truth keeps the strip and the row badges agreeing.
-   Every value clears 4.5:1 against white. layout.spec.mjs enforces that by
-   browsing glue -- the one service whose actions cover all six levels, so all
-   six badges render and get measured. */
+/* --- the theme layer --------------------------------------------------------
+
+   A theme is a palette family (Slate, Parchment, Carbon) crossed with a mode,
+   selected by `data-theme` on the root element and paired with a matching
+   `data-bs-theme`. theme.js stamps both; see the note there.
+
+   The whole page draws on the --br-* contract below and nothing else. A literal
+   colour anywhere outside these blocks is a bug: it will be correct on one
+   ground and wrong on the other five, and only two of the six get looked at
+   during a change. That is not a style preference -- `rgba(255,255,255,0.035)`
+   was the row hover for the entire dark-only life of this file, and it is
+   invisible the moment the ground turns white.
+
+       --br-bg            the page
+       --br-panel         a surface that sits off the page: cards, output, sticky heads
+       --br-rule          every hairline
+       --br-ink           body text, identifiers, anything being read
+       --br-dim           supporting text: descriptions, labels, counts' units
+       --br-hover         the wash under a hovered row -- translucent, so it works
+                          over both --br-bg and --br-panel
+       --br-strong        the fill under the tab's primary action, and the
+       --br-strong-hover  combobox's active option
+       --br-accent        "you have to act on this" -- .scope-required alone
+       --br-danger        Deny, and a policy over the size cap
+       --br-shadow        the combobox's drop shadow
+
+   Access levels deliberately do NOT vary by theme. They are the primary way to
+   read a permission set at a glance, and the permission-surface strip paints the
+   same six hues at full width, so a screenshot of one service has to mean the
+   same thing whichever theme took it. Held as custom properties so the strip and
+   the row badges cannot disagree. Every value clears 4.5:1 against the white
+   badge text; layout.spec.mjs enforces that in all six themes by browsing glue
+   -- the one service whose actions cover all six levels, so all six badges
+   render and get measured. */
 :root {
     --level-Read:        #1f6f8b;
     --level-List:        #3f6212;
@@ -112,15 +162,112 @@
     --level-Tagging:     #4c1d95;
     --level-Permissions: #9f1239;
     --level-Unknown:     #44403c;
+}
 
-    /* The Browse tab's palette, shared: the navbar status chip and the Generate
-       tab's context band are built from the same four values so the three read
-       as one surface. Declared once here rather than per-pane -- a `#pane-browse`
-       copy would outrank this one and the two would drift apart unnoticed. */
-    --br-panel: #161c24;
-    --br-rule:  #242e3a;
-    --br-ink:   #e8eef5;
-    --br-dim:   #8d9bab;
+/* Slate Dark's tokens are also the bare `:root` defaults, so a `data-theme` that
+   matches no block below -- a stale value in localStorage, an id renamed in one
+   place and not the other -- degrades to the page's original palette instead of
+   rendering with every colour undefined. */
+:root,
+:root[data-theme="slate-dark"] {
+    --br-bg:            #212529;
+    --br-panel:         #161c24;
+    --br-rule:          #242e3a;
+    --br-ink:           #e8eef5;
+    --br-dim:           #8d9bab;
+    --br-hover:         rgba(255, 255, 255, 0.035);
+    --br-strong:        rgba(255, 255, 255, 0.09);
+    --br-strong-hover:  rgba(255, 255, 255, 0.16);
+    --br-accent:        #f0b429;
+    --br-danger:        #ea868f;
+    --br-shadow:        0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="slate-light"] {
+    --br-bg:            #f7f9fb;
+    --br-panel:         #ffffff;
+    --br-rule:          #d7dee7;
+    --br-ink:           #10151b;
+    --br-dim:           #5b6b7c;
+    --br-hover:         rgba(16, 21, 27, 0.04);
+    --br-strong:        rgba(16, 21, 27, 0.07);
+    --br-strong-hover:  rgba(16, 21, 27, 0.13);
+    --br-accent:        #a16207;
+    --br-danger:        #b02a37;
+    --br-shadow:        0 0.375rem 0.75rem rgba(16, 21, 27, 0.12);
+}
+
+:root[data-theme="parchment-light"] {
+    --br-bg:            #faf7f0;
+    --br-panel:         #fffdf8;
+    --br-rule:          #e2dbcc;
+    --br-ink:           #23201a;
+    --br-dim:           #6d6455;
+    --br-hover:         rgba(35, 32, 26, 0.04);
+    --br-strong:        rgba(35, 32, 26, 0.07);
+    --br-strong-hover:  rgba(35, 32, 26, 0.13);
+    --br-accent:        #b45309;
+    --br-danger:        #a4193d;
+    --br-shadow:        0 0.375rem 0.75rem rgba(35, 32, 26, 0.12);
+}
+
+:root[data-theme="parchment-dark"] {
+    --br-bg:            #1a1713;
+    --br-panel:         #201c17;
+    --br-rule:          #322c24;
+    --br-ink:           #f0e9dc;
+    --br-dim:           #9c9081;
+    --br-hover:         rgba(240, 233, 220, 0.04);
+    --br-strong:        rgba(240, 233, 220, 0.09);
+    --br-strong-hover:  rgba(240, 233, 220, 0.16);
+    --br-accent:        #e0a419;
+    --br-danger:        #e88b7d;
+    --br-shadow:        0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="carbon-light"] {
+    --br-bg:            #ffffff;
+    --br-panel:         #f4f4f4;
+    --br-rule:          #d4d4d4;
+    --br-ink:           #0a0a0a;
+    --br-dim:           #5f5f5f;
+    --br-hover:         rgba(0, 0, 0, 0.045);
+    --br-strong:        rgba(0, 0, 0, 0.08);
+    --br-strong-hover:  rgba(0, 0, 0, 0.14);
+    --br-accent:        #8a5a00;
+    --br-danger:        #be123c;
+    --br-shadow:        0 0.375rem 0.75rem rgba(0, 0, 0, 0.14);
+}
+
+:root[data-theme="carbon-dark"] {
+    --br-bg:            #0a0a0a;
+    --br-panel:         #141414;
+    --br-rule:          #2b2b2b;
+    --br-ink:           #f5f5f5;
+    --br-dim:           #909090;
+    --br-hover:         rgba(255, 255, 255, 0.05);
+    --br-strong:        rgba(255, 255, 255, 0.11);
+    --br-strong-hover:  rgba(255, 255, 255, 0.18);
+    --br-accent:        #ffb224;
+    --br-danger:        #f87171;
+    --br-shadow:        0 0.5rem 1rem rgba(0, 0, 0, 0.6);
+}
+
+/* Bootstrap's chrome -- the nav tabs, form controls, footer links, the fatal
+   alert -- reads its own variables, so the palette is handed back to it here
+   rather than leaving it to sit beside the theme in whatever grey `data-bs-theme`
+   ships with.
+
+   `:root` and `[data-bs-theme="dark"]` have equal specificity, so this block
+   wins only because app.css loads after bootstrap.min.css. Moving the link tags
+   in index.html would silently undo it. */
+:root {
+    --bs-body-bg:         var(--br-bg);
+    --bs-body-color:      var(--br-ink);
+    --bs-emphasis-color:  var(--br-ink);
+    --bs-secondary-color: var(--br-dim);
+    --bs-secondary-bg:    var(--br-panel);
+    --bs-border-color:    var(--br-rule);
 }
 
 /* Monospace, tracked and uppercase: the label above a band of controls. Shared
@@ -141,7 +288,7 @@
 .scope-required {
     font-family: var(--bs-font-monospace);
     font-size: 0.75rem;
-    color: #f0b429;
+    color: var(--br-accent);
 }
 
 .scope-optional,
@@ -167,7 +314,7 @@
     color: var(--br-ink);
 }
 
-.finding-error   { border-color: var(--bs-danger); }
+.finding-error   { border-color: var(--br-danger); }
 .finding-warning { border-color: var(--bs-warning); }
 .finding-info    { border-color: var(--bs-info); }
 
@@ -181,7 +328,7 @@
 .context-arn {
     font-family: var(--bs-font-monospace);
     font-size: 0.75rem;
-    color: var(--bs-secondary-color);
+    color: var(--br-dim);
     word-break: break-all;
 }
 
@@ -212,13 +359,13 @@ td.description {
     transform: translateY(-50%);
     padding: 0 0.4rem;
     line-height: 1;
-    color: var(--bs-secondary-color);
+    color: var(--br-dim);
     border: 0;
     background: transparent;
 }
 
 .combobox-clear:hover {
-    color: var(--bs-body-color);
+    color: var(--br-ink);
 }
 
 .combobox-list {
@@ -231,10 +378,10 @@ td.description {
     margin: 0;
     padding: 0.25rem;
     list-style: none;
-    background: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
+    background: var(--br-bg);
+    border: 1px solid var(--br-rule);
     border-radius: var(--bs-border-radius);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+    box-shadow: var(--br-shadow);
 }
 
 .combobox-option {
@@ -246,29 +393,31 @@ td.description {
     cursor: pointer;
 }
 
+/* --br-strong rather than --br-hover: this marks the option the Enter key will
+   commit, so it has to be legible at a glance, not merely present. */
 .combobox-option:hover,
 .combobox-option.active {
-    background: var(--bs-tertiary-bg);
+    background: var(--br-strong);
 }
 
 .combobox-key {
     margin-left: auto;
     font-family: var(--bs-font-monospace);
     font-size: 0.75rem;
-    color: var(--bs-secondary-color);
+    color: var(--br-dim);
 }
 
 .combobox-empty {
     padding: 0.5rem;
-    color: var(--bs-secondary-color);
+    color: var(--br-dim);
 }
 
 /* Action names link to the reference; keep them readable as table text until
    hovered so 180 rows do not read as a wall of links. */
 .action-link {
-    color: var(--bs-body-color);
+    color: var(--br-ink);
     text-decoration: none;
-    border-bottom: 1px dotted var(--bs-secondary-color);
+    border-bottom: 1px dotted var(--br-dim);
 }
 
 .action-link:hover {
@@ -518,7 +667,7 @@ td.description {
 #pane-browse #browse-actions .table {
     --bs-table-bg: transparent;
     --bs-table-color: var(--br-ink);
-    --bs-table-hover-bg: rgba(255, 255, 255, 0.035);
+    --bs-table-hover-bg: var(--br-hover);
     --bs-table-hover-color: var(--br-ink);
     margin: 0;
 }
@@ -621,8 +770,8 @@ td.description {
    thing always visible at the top of the statement, so it carries the signal --
    alongside the select, never instead of it. */
 #pane-generate .statement-card.is-deny .stmt-tag {
-    border-color: var(--bs-danger);
-    color: var(--bs-danger);
+    border-color: var(--br-danger);
+    color: var(--br-danger);
 }
 
 #pane-generate .stmt-remove {
@@ -637,8 +786,8 @@ td.description {
 }
 
 #pane-generate .stmt-remove:hover:not(:disabled) {
-    color: var(--bs-danger);
-    border-color: var(--bs-danger);
+    color: var(--br-danger);
+    border-color: var(--br-danger);
 }
 
 #pane-generate .stmt-remove:disabled {
@@ -673,7 +822,7 @@ td.description {
 }
 
 #pane-generate .picker-row:hover {
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--br-hover);
 }
 
 #pane-generate .picker-row .form-check-input {
@@ -727,7 +876,7 @@ td.description {
 /* A managed policy is rejected above 6,144 non-whitespace characters, so the
    count turns from a fact into a warning. */
 #pane-generate .policy-size.over-cap {
-    color: var(--bs-danger);
+    color: var(--br-danger);
     font-weight: 600;
 }
 
@@ -738,7 +887,7 @@ td.description {
    sitting on top of it. */
 #pane-generate .form-control,
 #pane-generate .form-select {
-    background-color: var(--bs-body-bg);
+    background-color: var(--br-bg);
     border-color: var(--br-rule);
     color: var(--br-ink);
 }
@@ -774,7 +923,7 @@ td.description {
 
 #pane-generate .btn-quiet:hover {
     border-color: var(--br-dim);
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--br-hover);
 }
 
 /* Copy JSON is the tab's primary action and should look it, but Bootstrap's
@@ -786,13 +935,13 @@ td.description {
     font-weight: 600;
     line-height: 1.2;
     color: var(--br-ink);
-    background: rgba(255, 255, 255, 0.09);
+    background: var(--br-strong);
     border: 1px solid var(--br-dim);
     border-radius: 0.25rem;
 }
 
 #pane-generate .btn-strong:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: var(--br-strong-hover);
     border-color: var(--br-ink);
 }
 

@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures.mjs";
 import { ACCESS_LEVELS } from "../../site/js/policy.js";
+import { THEMES } from "../../site/js/theme.js";
 
 /**
  * Layout and colour, in a real browser.
@@ -125,7 +126,38 @@ test("the dropdown paints above the content beneath it", async ({ page }) => {
     expect(topmost).toBe("dropdown");
 });
 
-test("access-level badges clear WCAG AA against their text", async ({ page }) => {
+/**
+ * WCAG contrast between two colours, as source to rebuild inside the page.
+ *
+ * Both colour tests below need it, on opposite sides of the bridge: one reads
+ * colours off rendered elements, the other off the token declarations. It has
+ * to cross as a string because `page.evaluate` serialises the function it is
+ * handed and cannot close over a helper — and it is one self-contained
+ * expression, rather than statements, because the receiving side rebuilds it
+ * with `new Function`, which `const` declarations would scope away.
+ *
+ * Accepts both notations: getComputedStyle resolves a rendered colour to
+ * `rgb(…)`, but returns a custom property's declaration verbatim, so a token
+ * arrives as the `#rrggbb` it was written as.
+ */
+const CONTRAST_SOURCE = `function (x, y) {
+    const channel = (v) => {
+        const c = v / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = (colour) => {
+        const text = colour.trim();
+        const parts = text.startsWith("#")
+            ? text.slice(1).match(/../g).map((h) => parseInt(h, 16))
+            : text.match(/[\\d.]+/g).map(Number);
+        const [r, g, b] = parts.slice(0, 3).map(channel);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [a, b] = [luminance(x), luminance(y)];
+    return Number(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toFixed(2));
+}`;
+
+test("access-level badges clear WCAG AA against their text, in every theme", async ({ page }) => {
     // The badge colours are hand-picked hex values. Nothing else stops a future
     // tweak from landing an unreadable one.
     //
@@ -133,34 +165,110 @@ test("access-level badges clear WCAG AA against their text", async ({ page }) =>
     // carry all six levels -- browsing anything else renders a subset and leaves
     // the rest of the palette unmeasured. The completeness check below fails if
     // that ever stops being true.
+    //
+    // The six levels are deliberately theme-independent, so this loop should
+    // measure the same numbers six times over. That is the point: it is what
+    // fails the day someone moves them into the theme blocks and retunes one.
     await page.goto("/");
     await pickService(page, "#browse-service", "glue");
     await expect(page.locator("#browse-actions tbody tr").first()).toBeVisible();
 
-    const ratios = await page.evaluate(() => {
-        const channel = (v) => {
-            const c = v / 255;
-            return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-        };
-        const luminance = (rgb) => {
-            const [r, g, b] = rgb.match(/\d+/g).map(Number).map(channel);
-            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        };
+    for (const { id } of THEMES) {
+        const ratios = await page.evaluate(
+            ([theme, source]) => {
+                document.documentElement.setAttribute("data-theme", theme);
+                const contrast = new Function(`return ${source}`)();
 
-        const seen = new Map();
-        for (const badge of document.querySelectorAll(".access-level")) {
-            const style = getComputedStyle(badge);
-            const [a, b] = [luminance(style.backgroundColor), luminance(style.color)];
-            const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-            seen.set(badge.textContent.trim(), Number(ratio.toFixed(2)));
+                const seen = new Map();
+                for (const badge of document.querySelectorAll(".access-level")) {
+                    const style = getComputedStyle(badge);
+                    seen.set(
+                        badge.textContent.trim(),
+                        contrast(style.backgroundColor, style.color),
+                    );
+                }
+                return [...seen.entries()];
+            },
+            [id, CONTRAST_SOURCE],
+        );
+
+        expect(new Set(ratios.map(([level]) => level)), `levels rendered in ${id}`)
+            .toEqual(new Set(ACCESS_LEVELS));
+
+        for (const [level, ratio] of ratios) {
+            expect(ratio, `${id}: ${level} badge contrast ${ratio}:1`).toBeGreaterThanOrEqual(4.5);
         }
-        return [...seen.entries()];
-    });
-
-    expect(new Set(ratios.map(([level]) => level))).toEqual(new Set(ACCESS_LEVELS));
-    for (const [level, ratio] of ratios) {
-        expect(ratio, `${level} badge contrast ${ratio}:1`).toBeGreaterThanOrEqual(4.5);
     }
+});
+
+test("every theme is declared, distinct, and legible on its own ground", async ({ page }) => {
+    // Three failures in one sweep, all of them silent in a browser:
+    //
+    //   1. theme.js offers an id app.css never declares. The picker looks fine
+    //      and the page falls back to Slate Dark, so the theme simply does
+    //      nothing -- and the `:root` fallback is what hides it.
+    //   2. Two themes resolve to the same ground, meaning one block's selector
+    //      is misspelled and is not matching at all.
+    //   3. A palette lands text that cannot be read on its own surface. Checked
+    //      against the tokens rather than rendered elements because the contract
+    //      is the token pair: --br-dim has to work on --br-panel whether or not
+    //      anything happens to be painting that combination today.
+    await page.goto("/");
+
+    const measured = [];
+    for (const { id } of THEMES) {
+        measured.push(
+            await page.evaluate(
+                ([theme, source]) => {
+                    document.documentElement.setAttribute("data-theme", theme);
+                    const contrast = new Function(`return ${source}`)();
+
+                    const style = getComputedStyle(document.documentElement);
+                    const token = (name) => style.getPropertyValue(name).trim();
+                    const [bg, panel] = [token("--br-bg"), token("--br-panel")];
+
+                    return {
+                        theme,
+                        bg,
+                        pairs: ["--br-ink", "--br-dim", "--br-accent", "--br-danger"].flatMap(
+                            (name) => [
+                                [`${name} on --br-bg`, contrast(token(name), bg)],
+                                [`${name} on --br-panel`, contrast(token(name), panel)],
+                            ],
+                        ),
+                    };
+                },
+                [id, CONTRAST_SOURCE],
+            ),
+        );
+    }
+
+    for (const { theme, bg, pairs } of measured) {
+        expect(bg, `${theme} declares --br-bg`).toMatch(/^#[0-9a-f]{6}$/i);
+        for (const [pair, ratio] of pairs) {
+            expect(ratio, `${theme}: ${pair} is ${ratio}:1`).toBeGreaterThanOrEqual(4.5);
+        }
+    }
+
+    expect(new Set(measured.map((m) => m.bg)).size, "each theme has its own ground")
+        .toBe(THEMES.length);
+});
+
+test("the picker applies a theme and remembers it across a reload", async ({ page }) => {
+    await page.goto("/");
+
+    const root = page.locator("html");
+    await page.locator("#theme-select").selectOption("carbon-light");
+    await expect(root).toHaveAttribute("data-theme", "carbon-light");
+    await expect(root).toHaveAttribute("data-bs-theme", "light");
+
+    await page.reload();
+
+    // The assertion the pre-paint script exists for: without it the module would
+    // land this attribute only after the first paint, and the reload would flash
+    // the dark ground before turning white.
+    await expect(root).toHaveAttribute("data-theme", "carbon-light");
+    await expect(page.locator("#theme-select")).toHaveValue("carbon-light");
 });
 
 test("action links are distinguishable from plain table text", async ({ page }) => {
