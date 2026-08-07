@@ -30,8 +30,11 @@ fetches its data over HTTP and `file://` blocks that as cross-origin.
 | [`iann0036/iam-dataset`](https://github.com/iann0036/iam-dataset) | Per-action access levels, resource types, dependent actions, condition keys | A scrape of the Service Authorization Reference. |
 
 Neither is complete on its own — the build takes their **union**, not their
-intersection. At the last run that was 453 services: 40 known only to
-policies.js, 5 only to the SAR.
+intersection. At the last run both sources listed the same 453 service
+prefixes, but they still disagreed on actions: policies.js carried 19
+`sms-voice` actions the SAR had not published yet. Prefix coverage has diverged
+before and will again, so the merge stays a union — `manifest.json` records
+which services each source contributed alone.
 
 Everything under `site/data/` is derived from those sources and carries their
 terms, not this project's — see [NOTICE](NOTICE).

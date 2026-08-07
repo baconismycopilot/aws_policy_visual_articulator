@@ -56,8 +56,11 @@ selection and memoized for the session. `app.js` owns the shared account context
 
 These are upstream quirks the build normalizes; getting them wrong silently corrupts results:
 
-- The two sources are **unioned by service prefix, not intersected**. Each has services the
-  other lacks; intersecting drops dozens.
+- The two sources are **unioned by service prefix, not intersected**. Prefix coverage happens
+  to agree right now (453 each), so the union looks like a no-op at that level — it is not.
+  They still disagree on *actions* within a shared prefix, and prefix coverage has diverged
+  before. Do not simplify the merge into a SAR-keyed lookup; `test_merge_is_a_union_not_an_intersection`
+  guards this.
 - `access_level` arrives as one comma-joined string (`"Permissions management, Write"`). The
   build splits it into the `access_levels` **list**. Treating it as a scalar drops most
   permission-management actions.
