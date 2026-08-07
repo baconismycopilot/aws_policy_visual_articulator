@@ -90,23 +90,36 @@ a band at the top of `#pane-generate` for that reason — they were in the navba
 placement implied a page-wide scope the code never had.
 
 `theme.js` owns the theme, and that one *is* page-wide, which is why its picker is the one
-control that belongs in the navbar. It knows no colour — only which id to stamp. Three things
-about it are load-bearing:
+control that belongs in the navbar. It knows no colour — only which id to stamp.
+
+What is stored is a **preference**, not a theme: `<family>-<mode>`, where mode may also be
+`system`. That distinction is the reason the navbar has two selects instead of one list of six —
+following the OS is a property of the mode, so it no longer costs you the choice of palette.
+A preference with a real mode already *is* a theme id; one ending in `-system` becomes one by
+substituting the suffix. Both directions are pure string work, deliberately: the pre-paint script
+has to do the same job before any module loads.
+
+Four things about it are load-bearing:
 
 - It stamps `data-theme` **and** `data-bs-theme` together. They must never disagree: the second
   is what puts Bootstrap's chevron-in-a-data-URI `.form-select` arrow in the right colour.
 - The mode is read off the id's suffix rather than a lookup, so a theme id has to end in
-  `-light` or `-dark`. That is what lets the pre-paint script in `<head>` derive the Bootstrap
-  mode without duplicating the theme list. The script exists because modules are deferred:
-  without it, choosing a light theme flashes the dark ground on every reload.
+  `-light` or `-dark`, and **a family id must not contain a hyphen** — a preference is split at
+  its last one. That is what lets the pre-paint script in `<head>` resolve a preference without
+  duplicating the tables. The script exists because modules are deferred: without it, choosing a
+  light theme flashes the dark ground on every reload. Both rules are asserted in `ui.test.mjs`.
 - `initTheme()` runs first in `main()` and **outside its try**, so the theme is right on the
   error path too — `showFatal` renders into this same page.
+- A bare `"system"` in storage is migrated to `slate-system`. That is what the single-select
+  picker wrote for "follow the OS"; it named no family because there was only one it could mean.
+  Read as a preference it parses as nothing, so without the migration a returning visitor on a
+  light desktop would be pinned to dark. The module and the pre-paint script carry that rule
+  separately, and both are covered.
 
-The default preference is `system`, resolving within the Slate family, so a first-time visitor on
-a dark desktop sees exactly what the page has always looked like. An unrecognised stored value
-resolves to `system` rather than being stamped, and bare `:root` carries Slate Dark's tokens so
-an unknown `data-theme` degrades to that palette instead of rendering with every colour
-undefined.
+The default is `slate-system`, so a first-time visitor on a dark desktop sees exactly what the
+page has always looked like. An unparseable stored value falls back to that default rather than
+being stamped, and bare `:root` carries Slate Dark's tokens so an unknown `data-theme` degrades
+to that palette instead of rendering with every colour undefined.
 
 ### Data model invariants
 

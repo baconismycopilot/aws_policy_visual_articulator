@@ -640,33 +640,54 @@ async function bootTheme(stored) {
     return { page, theme };
 }
 
-test("theme: the picker offers System and every theme, and defaults to System", async () => {
+test("theme: both controls are offered, defaulting to Slate following the OS", async () => {
     // Through app.js, so this also covers the wiring: initTheme has to be called
     // on the shell's own path, not only when a test reaches for the module.
     const page = await bootApp();
-    const select = page.document.getElementById("theme-select");
-
-    assert.ok(select, "the picker is in the markup");
-
-    const { THEMES } = await import("../site/js/theme.js");
-    assert.deepEqual(
-        [...select.options].map((o) => o.value),
-        ["system", ...THEMES.map((t) => t.id)],
-        "System leads, then every theme the CSS declares",
+    const [family, mode] = ["theme-family", "theme-mode"].map((id) =>
+        page.document.getElementById(id),
     );
-    assert.equal(select.value, "system", "an untouched visitor follows the OS");
+
+    assert.ok(family && mode, "both selects are in the markup");
+
+    const { FAMILIES, MODES } = await import("../site/js/theme.js");
+    assert.deepEqual(
+        [...family.options].map((o) => o.value),
+        FAMILIES.map((f) => f.id),
+    );
+    assert.deepEqual(
+        [...mode.options].map((o) => o.value),
+        MODES.map((m) => m.id),
+        "System leads the modes — it is the default",
+    );
+
+    assert.equal(family.value, "slate", "the palette the page shipped with");
+    assert.equal(mode.value, "system", "an untouched visitor follows the OS");
     page.cleanup();
 });
 
-test("theme: choosing one stamps both attributes and remembers it", async () => {
+test("theme: the two controls are independent", async () => {
+    // The whole reason for splitting them. With one flat list of six, choosing
+    // Parchment meant giving up following the OS, and vice versa.
     const { page } = await bootTheme();
     const root = page.document.documentElement;
-    const select = page.document.getElementById("theme-select");
+    const family = page.document.getElementById("theme-family");
+    const mode = page.document.getElementById("theme-mode");
 
-    select.value = "parchment-light";
-    change(select);
+    family.value = "parchment";
+    change(family);
+
+    // Still following the OS, now in Parchment. The harness reports "not light",
+    // so it resolves dark.
+    assert.equal(root.getAttribute("data-theme"), "parchment-dark");
+    assert.equal(mode.value, "system", "picking a palette left the mode alone");
+    assert.equal(page.window.localStorage.getItem("apva.theme"), "parchment-system");
+
+    mode.value = "light";
+    change(mode);
 
     assert.equal(root.getAttribute("data-theme"), "parchment-light");
+    assert.equal(family.value, "parchment", "picking a mode left the palette alone");
     assert.equal(
         root.getAttribute("data-bs-theme"),
         "light",
@@ -691,21 +712,52 @@ test("theme: every id agrees with the mode its suffix advertises", async () => {
     }
 });
 
-test("theme: a stored value naming no theme falls back rather than being stamped", async () => {
-    // A hand-edited entry, or an id from a build where the themes were named
+test("theme: a family id cannot contain the separator", async () => {
+    // A preference is split at its last hyphen, so a family called "warm-slate"
+    // would parse as family "warm" and mode "slate" — both unknown, and every
+    // stored preference naming it would silently reset to the default.
+    const { FAMILIES } = await import("../site/js/theme.js");
+
+    for (const { id } of FAMILIES) {
+        assert.ok(!id.includes("-"), `family "${id}" must not contain a hyphen`);
+    }
+});
+
+test("theme: a stored value naming nothing falls back rather than being stamped", async () => {
+    // A hand-edited entry, or a family from a build where they were named
     // differently. Stamping it would leave data-theme matching no block.
-    const { page } = await bootTheme("vaporwave");
+    const { page } = await bootTheme("vaporwave-light");
     const root = page.document.documentElement;
 
     assert.equal(root.getAttribute("data-theme"), "slate-dark", "resolved, not echoed");
-    assert.equal(page.document.getElementById("theme-select").value, "system");
+    assert.equal(page.document.getElementById("theme-family").value, "slate");
+    assert.equal(page.document.getElementById("theme-mode").value, "system");
+    page.cleanup();
+});
+
+test("theme: a bare \"system\" from the old picker still follows the OS", async () => {
+    // What the single-select picker wrote for "follow the OS". It named no
+    // family because there was only one it could mean. Read as a preference it
+    // parses as nothing, so without the migration it would reset to the default
+    // — which happens to look identical here, and would not on a light desktop.
+    const { page } = await bootTheme("system");
+
+    assert.equal(page.document.getElementById("theme-family").value, "slate");
+    assert.equal(
+        page.document.getElementById("theme-mode").value,
+        "system",
+        "carried across as following the OS, not as an unreadable value",
+    );
     page.cleanup();
 });
 
 test("theme: a remembered choice survives the reload", async () => {
+    // "carbon-dark" is also exactly what the old picker stored for a pinned
+    // theme, so this doubles as the other half of the migration.
     const { page } = await bootTheme("carbon-dark");
 
     assert.equal(page.document.documentElement.getAttribute("data-theme"), "carbon-dark");
-    assert.equal(page.document.getElementById("theme-select").value, "carbon-dark");
+    assert.equal(page.document.getElementById("theme-family").value, "carbon");
+    assert.equal(page.document.getElementById("theme-mode").value, "dark");
     page.cleanup();
 });
