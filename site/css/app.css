@@ -47,7 +47,9 @@
    they get consistent colours everywhere they appear. Held as custom properties
    because the Browse tab's permission-surface strip paints the same six hues at
    full width -- one source of truth keeps the strip and the row badges agreeing.
-   Every value clears 4.5:1 against white; layout.spec.mjs enforces that. */
+   Every value clears 4.5:1 against white. layout.spec.mjs enforces that by
+   browsing glue -- the one service whose actions cover all six levels, so all
+   six badges render and get measured. */
 :root {
     --level-Read:        #1f6f8b;
     --level-List:        #3f6212;
@@ -431,9 +433,10 @@ td.description {
     border-radius: var(--bs-border-radius);
 }
 
-/* Long services run to hundreds of rows (ec2 has ~1,800), so the table gets its
-   own scroll area on a large screen and the masthead and strip stay put while
-   you read it. Left to flow on small screens, where the viewport is the pane. */
+/* Long services run to hundreds of rows (ec2 has 793, the most of any), so the
+   table gets its own scroll area on a large screen and the masthead and strip
+   stay put while you read it. Left to flow on small screens, where the viewport
+   is the pane. */
 @media (min-width: 992px) {
     #pane-browse #browse-actions {
         max-height: calc(100vh - 22rem);

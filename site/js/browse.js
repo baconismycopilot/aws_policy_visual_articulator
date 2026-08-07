@@ -105,8 +105,10 @@ function drawLevelFilters() {
         count: (service.actions || []).filter((a) => hasAccessLevel(a, level)).length,
     }))
         .filter(({ count }) => count > 0)
-        .map(({ level, count }) =>
-            el("button", {
+        .map(({ level, count }) => {
+            const label = `${level} — ${count} ${count === 1 ? "action" : "actions"}`;
+
+            return el("button", {
                 type: "button",
                 className: "surface-seg",
                 // Matches accessLevelBadge's slug, so a segment and the badges
@@ -114,7 +116,11 @@ function drawLevelFilters() {
                 style: `--seg: var(--level-${level.split(" ")[0]}); flex-grow: ${count}`,
                 dataset: { level },
                 "aria-pressed": "false",
-                title: `${count} actions carry ${level}`,
+                // The visible label is dropped on narrow segments, and a title
+                // does not name a button that already has text -- without this,
+                // the accessible name collapses to the bare count.
+                "aria-label": label,
+                title: label,
                 onclick: (event) => {
                     if (activeLevels.has(level)) activeLevels.delete(level);
                     else activeLevels.add(level);
@@ -128,8 +134,8 @@ function drawLevelFilters() {
             }, [
                 el("span", { className: "seg-label", textContent: level }),
                 el("span", { className: "seg-count", textContent: String(count) }),
-            ]),
-        );
+            ]);
+        });
 
     ui.levels.classList.remove("filtering");
     render(ui.levels, ...segments);
@@ -187,6 +193,10 @@ function actionCell(action) {
 }
 
 function drawActions() {
+    // The filter input is live from page load, but no service is loaded until a
+    // selection lands -- and onSelect puts us back here when the combobox clears.
+    if (!service) return;
+
     const actions = matchingActions();
     // "180" while unfiltered; "27 of 180" once something narrows it. Showing
     // "180 of 180" spends two numbers saying nothing.
