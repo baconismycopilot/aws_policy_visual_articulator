@@ -566,15 +566,21 @@ test("app: the context band echoes the ARN the fields build", async () => {
     page.cleanup();
 });
 
-test("app: the CI chip degrades to unknown when the status cannot be fetched", async () => {
-    // The harness fetch stub resolves paths against site/, so an https URL falls
-    // into its catch and comes back !ok — which is exactly the offline path.
+test("app: the CI badge reserves its space and points at the workflow", async () => {
+    // The badge is a remote image, so it is absent until github.com answers.
+    // Without intrinsic dimensions it would lay out at zero width and shove the
+    // navbar sideways when it lands; these attributes are what prevent that.
     const page = await bootApp();
-    const chip = page.document.getElementById("ci-status");
+    const badge = page.document.getElementById("ci-badge");
 
-    assert.ok(chip, "the chip is in the markup");
-    assert.equal(chip.classList.contains("status-ok"), false);
-    assert.equal(chip.classList.contains("status-fail"), false);
-    assert.equal(page.document.getElementById("ci-status-text").textContent, "CI");
+    assert.ok(badge, "the badge is in the markup");
+    assert.equal(badge.getAttribute("width"), "90");
+    assert.equal(badge.getAttribute("height"), "20");
+    assert.match(badge.getAttribute("src"), /\/actions\/workflows\/ci\.yml\/badge\.svg/);
+    assert.ok(badge.getAttribute("alt"), "the badge carries alt text");
+
+    const link = page.document.getElementById("ci-status");
+    assert.match(link.getAttribute("href"), /\/actions\/workflows\/ci\.yml$/);
+    assert.equal(link.getAttribute("rel"), "noopener");
     page.cleanup();
 });

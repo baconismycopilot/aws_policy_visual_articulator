@@ -75,7 +75,6 @@ site/                 the deployable
     combobox.js       fuzzy service picker            (scoring is DOM-free)
     browse.js         Browse tab
     generate.js       Generate tab
-    status.js         navbar CI chip — the one fetch allowed to fail
     dom.js            element helpers
   data/               generated — see "Refreshing"
 tests/

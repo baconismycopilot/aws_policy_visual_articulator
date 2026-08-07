@@ -8,7 +8,6 @@ import { loadGlobal, loadManifest } from "./data.js";
 import { renderArn } from "./arn.js";
 import { initBrowse } from "./browse.js";
 import { initGenerate, refreshGenerate } from "./generate.js";
-import { initStatus } from "./status.js";
 import { el, option, render } from "./dom.js";
 
 const STORAGE_KEY = "apva.context";
@@ -102,10 +101,6 @@ function showFatal(error) {
 
 async function main() {
     loadContext();
-
-    // Deliberately not awaited: the chip is decoration, and a slow or blocked
-    // api.github.com must not hold up the dataset the page is actually for.
-    initStatus();
 
     try {
         const [globalData, manifest] = await Promise.all([loadGlobal(), loadManifest()]);

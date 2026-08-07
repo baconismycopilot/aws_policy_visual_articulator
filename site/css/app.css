@@ -23,46 +23,25 @@
 
 /* --- navbar: repo link and build status ---------------------------------
 
-   The chip borrows .svc-prefix's box (hairline rule, 0.25rem radius) and wears
-   .eyebrow for its type, so it reads as part of the same surface as the rest of
-   the app instead of as an imported badge. The dot is decorative: the state is
-   in the text, so it survives colour blindness and a screen reader alike. */
+   GitHub's own badge, served from github.com. It brings its own type and its
+   own fixed palette, so it does not follow the theme -- accepted deliberately
+   for the badge everyone already recognises.
 
-.status-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45em;
-    padding: 0.3em 0.5em;
-    border: 1px solid var(--br-rule);
-    border-radius: 0.25rem;
-    line-height: 1;
-    text-decoration: none;
+   Height is pinned and width left auto: the badge's intrinsic width changes
+   with the word inside it (90px at "passing", narrower at "failing"), so a
+   fixed width would letterbox it the day the build goes red. */
+.badge-img {
+    display: block;
+    height: 20px;
+    width: auto;
 }
-
-.status-dot {
-    flex: none;
-    width: 0.5em;
-    height: 0.5em;
-    border-radius: 50%;
-    background: currentColor;
-}
-
-/* Unknown is the default the markup ships with: the chip renders dim before the
-   status arrives, and stays dim if it never does. */
-.status-ok   .status-dot { background: var(--bs-success); }
-.status-fail .status-dot { background: var(--bs-danger); }
 
 .repo-link {
     text-decoration: none;
 }
 
-.status-chip:hover,
 .repo-link:hover {
     color: var(--br-ink);
-}
-
-.status-chip:hover {
-    border-color: var(--br-dim);
 }
 
 .sticky-panel {

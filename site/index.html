@@ -15,14 +15,15 @@
         <span class="navbar-brand h4 mb-0">AWS Policy Visual Articulator</span>
 
         <div class="d-flex align-items-center gap-3 ms-auto">
-            <!-- Ships in the unknown state and is upgraded once the API answers,
-                 so a blocked or throttled request leaves a dim chip rather than
-                 a missing one. -->
-            <a id="ci-status" class="status-chip eyebrow"
+            <!-- width/height are the badge's own intrinsic size: they reserve the
+                 space before the image arrives, so a slow or blocked github.com
+                 cannot shift the navbar on load. CSS keeps the real width. -->
+            <a id="ci-status"
                href="https://github.com/baconismycopilot/aws_policy_visual_articulator/actions/workflows/ci.yml"
-               target="_blank" rel="noopener" title="Build status unavailable">
-                <span class="status-dot" aria-hidden="true"></span>
-                <span id="ci-status-text">CI</span>
+               target="_blank" rel="noopener">
+                <img id="ci-badge" class="badge-img" width="90" height="20"
+                     src="https://github.com/baconismycopilot/aws_policy_visual_articulator/actions/workflows/ci.yml/badge.svg?branch=main"
+                     alt="CI build status">
             </a>
 
             <a class="repo-link eyebrow"
