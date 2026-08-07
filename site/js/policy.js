@@ -459,6 +459,33 @@ export function validate(policyTypeKey, statements, getService) {
         }
     });
 
+    // AWS rejects a document whose Sids are not unique, so this is an error
+    // rather than a warning. Compared on what will actually be emitted, not on
+    // what was typed: punctuation is stripped on the way out, so "Read Objects"
+    // and "ReadObjects" are the same Sid by the time it ships, and a statement
+    // that splits by resource scope emits a second Sid of its own that a
+    // hand-written one can collide with.
+    const sidOwner = new Map();
+    statements.forEach((statement, index) => {
+        for (const emitted of resolveStatements([statement], getService)) {
+            const sid = sanitizeSid(emitted.sid);
+            if (!sid) continue;
+
+            const owner = sidOwner.get(sid);
+            if (owner === undefined) {
+                sidOwner.set(sid, index);
+            } else {
+                findings.push({
+                    level: "error",
+                    message:
+                        `Sid "${sid}" is already used by statement ${owner + 1}. ` +
+                        "AWS rejects a policy whose Sids are not unique.",
+                    statement: index,
+                });
+            }
+        }
+    });
+
     if (statements.length === 0) {
         findings.push({
             level: "error",
