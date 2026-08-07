@@ -143,9 +143,26 @@
                           over both --br-bg and --br-panel
        --br-strong        the fill under the tab's primary action, and the
        --br-strong-hover  combobox's active option
-       --br-accent        "you have to act on this" -- .scope-required alone
-       --br-danger        Deny, and a policy over the size cap
+       --br-accent        caution: .scope-required, and a warning finding
+       --br-danger        Deny, a policy over the size cap, and an error finding
+       --br-info          an informational finding
        --br-shadow        the combobox's drop shadow
+
+   The findings grade severity in three steps, and each step reuses the colour
+   the page already means it with: danger for an error, the family's caution
+   amber for a warning, and --br-info for the rest.
+
+   There is deliberately no --br-warning. Every value one would have taken came
+   out as --br-accent's, and a token that only ever duplicates another is worse
+   than no token: it reads as an independent knob, so retuning the amber in one
+   place and not the other looks like a change rather than the drift it is. The
+   coupling is the point -- make the family's caution louder and both the
+   required marker and the warning stripe follow.
+
+   --br-info and --br-accent are the one pair held to 3:1 rather than 4.5:1 where
+   they land as a finding's border, because a 3px stripe is a graphical object
+   and not text. --br-accent still has to clear 4.5:1: .scope-required sets it as
+   type. Both thresholds are asserted in layout.spec.mjs rather than assumed.
 
    Access levels deliberately do NOT vary by theme. They are the primary way to
    read a permission set at a glance, and the permission-surface strip paints the
@@ -180,6 +197,7 @@
     --br-strong-hover:  rgba(255, 255, 255, 0.16);
     --br-accent:        #f0b429;
     --br-danger:        #ea868f;
+    --br-info:          #4ea8c9;
     --br-shadow:        0 0.5rem 1rem rgba(0, 0, 0, 0.3);
 }
 
@@ -194,6 +212,7 @@
     --br-strong-hover:  rgba(16, 21, 27, 0.13);
     --br-accent:        #a16207;
     --br-danger:        #b02a37;
+    --br-info:          #1f6f8b;
     --br-shadow:        0 0.375rem 0.75rem rgba(16, 21, 27, 0.12);
 }
 
@@ -208,6 +227,7 @@
     --br-strong-hover:  rgba(35, 32, 26, 0.13);
     --br-accent:        #b45309;
     --br-danger:        #a4193d;
+    --br-info:          #1d6b6b;
     --br-shadow:        0 0.375rem 0.75rem rgba(35, 32, 26, 0.12);
 }
 
@@ -222,6 +242,7 @@
     --br-strong-hover:  rgba(240, 233, 220, 0.16);
     --br-accent:        #e0a419;
     --br-danger:        #e88b7d;
+    --br-info:          #6fb0a8;
     --br-shadow:        0 0.5rem 1rem rgba(0, 0, 0, 0.4);
 }
 
@@ -236,6 +257,7 @@
     --br-strong-hover:  rgba(0, 0, 0, 0.14);
     --br-accent:        #8a5a00;
     --br-danger:        #be123c;
+    --br-info:          #0369a1;
     --br-shadow:        0 0.375rem 0.75rem rgba(0, 0, 0, 0.14);
 }
 
@@ -250,6 +272,7 @@
     --br-strong-hover:  rgba(255, 255, 255, 0.18);
     --br-accent:        #ffb224;
     --br-danger:        #f87171;
+    --br-info:          #38bdf8;
     --br-shadow:        0 0.5rem 1rem rgba(0, 0, 0, 0.6);
 }
 
@@ -315,8 +338,8 @@
 }
 
 .finding-error   { border-color: var(--br-danger); }
-.finding-warning { border-color: var(--bs-warning); }
-.finding-info    { border-color: var(--bs-info); }
+.finding-warning { border-color: var(--br-accent); }
+.finding-info    { border-color: var(--br-info); }
 
 
 .arn-segment {
