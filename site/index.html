@@ -1,12 +1,44 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-theme="slate-dark" data-bs-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AWS Policy Visual Articulator</title>
+
+    <!-- Stamps the stored theme before the first paint. theme.js does this too,
+         but it is a module and therefore deferred: by the time it runs the page
+         has already been painted, so choosing a light theme would flash the dark
+         one on every reload.
+
+         Deliberately duplicated rather than imported, and kept to the one thing
+         that has to happen early. It knows no palette and no list of themes --
+         the mode is read off the id's suffix, which is why theme.js requires
+         every id to end in `-light` or `-dark`. An id this script does not
+         recognise still lands on the element; app.css falls back to Slate Dark
+         for any unknown value, and theme.js normalises the stored entry a tick
+         later. -->
+    <script>
+        (function () {
+            var stored = null;
+            try {
+                stored = localStorage.getItem("apva.theme");
+            } catch (e) {
+                // Storage blocked; fall through to the OS preference.
+            }
+            var id = stored && stored !== "system"
+                ? stored
+                : (matchMedia("(prefers-color-scheme: light)").matches ? "slate-light" : "slate-dark");
+            document.documentElement.setAttribute("data-theme", id);
+            document.documentElement.setAttribute(
+                "data-bs-theme", /-dark$/.test(id) ? "dark" : "light");
+        })();
+    </script>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT"
           crossorigin="anonymous">
+    <!-- Must stay after Bootstrap: app.css hands the theme's palette back to
+         Bootstrap's own variables, and the two selectors tie on specificity. -->
     <link rel="stylesheet" href="./css/app.css">
 </head>
 <body>
@@ -14,7 +46,15 @@
     <div class="container-fluid">
         <span class="navbar-brand h4 mb-0">AWS Policy Visual Articulator</span>
 
-        <div class="d-flex align-items-center gap-3 ms-auto">
+        <div class="navbar-tools ms-auto">
+            <div class="theme-picker">
+                <label class="eyebrow mb-0" for="theme-select">Theme</label>
+                <!-- Filled by theme.js: the option list is derived from the same
+                     table that resolves an id, so a theme cannot be offered
+                     without existing. -->
+                <select id="theme-select" class="form-select form-select-sm"></select>
+            </div>
+
             <!-- width/height are the badge's own intrinsic size: they reserve the
                  space before the image arrives, so a slow or blocked github.com
                  cannot shift the navbar on load. CSS keeps the real width. -->

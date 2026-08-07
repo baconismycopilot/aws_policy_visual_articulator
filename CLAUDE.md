@@ -54,13 +54,27 @@ split along a strict line:
 
 `app.css` is deliberately layered, and the layers matter more than they look:
 
-- **Shared, at the top**: the `--br-*` palette, `.eyebrow`, `.scope-*`, the access-level colours,
-  and the combobox. Both tabs and the navbar draw from these.
+- **The theme layer, at the top**: six `:root[data-theme="…"]` blocks, each declaring the whole
+  `--br-*` contract. Below them, one `:root` block hands those values back to Bootstrap's own
+  `--bs-*` variables so its chrome follows the palette instead of sitting beside it.
+- **Shared, next**: `.eyebrow`, `.scope-*`, the access-level colours, and the combobox. Both tabs
+  and the navbar draw from these.
 - **Pane-scoped, below**: `#pane-browse` (masthead, permission surface, action table) and
   `#pane-generate` (statement panels, action picker, output panel).
 
 The rule when promoting something to shared: **delete the pane-scoped copy**. An id-specificity
 duplicate silently outranks the shared rule, and the two drift apart with nothing to catch it.
+
+Its sibling for colour: **a literal outside a theme block is a bug**. It will be right on one
+ground and wrong on the other five, and only two of the six get looked at during a change —
+`rgba(255, 255, 255, 0.035)` was the row hover for this file's entire dark-only life and is
+invisible the moment the ground turns white. Everything paintable is a token, including the
+translucent overlays (`--br-hover`, `--br-strong`) and the combobox's drop shadow.
+
+The six access-level colours are the deliberate exception: they sit in a plain `:root` and do
+**not** vary by theme. The permission-surface strip paints them at full width, so a screenshot of
+one service has to mean the same thing whichever theme took it. `layout.spec.mjs` measures them
+in all six.
 
 Both panes obey one type rule — monospace where the content is an IAM identifier, sans where it
 is prose — and only the Browse permission strip animates.
@@ -74,6 +88,25 @@ but the context is **Generate's alone**: `initBrowse()` takes no context and the
 only calls `refreshGenerate()`. The Browse tab shows action names, not ARNs. The controls live in
 a band at the top of `#pane-generate` for that reason — they were in the navbar, where the
 placement implied a page-wide scope the code never had.
+
+`theme.js` owns the theme, and that one *is* page-wide, which is why its picker is the one
+control that belongs in the navbar. It knows no colour — only which id to stamp. Three things
+about it are load-bearing:
+
+- It stamps `data-theme` **and** `data-bs-theme` together. They must never disagree: the second
+  is what puts Bootstrap's chevron-in-a-data-URI `.form-select` arrow in the right colour.
+- The mode is read off the id's suffix rather than a lookup, so a theme id has to end in
+  `-light` or `-dark`. That is what lets the pre-paint script in `<head>` derive the Bootstrap
+  mode without duplicating the theme list. The script exists because modules are deferred:
+  without it, choosing a light theme flashes the dark ground on every reload.
+- `initTheme()` runs first in `main()` and **outside its try**, so the theme is right on the
+  error path too — `showFatal` renders into this same page.
+
+The default preference is `system`, resolving within the Slate family, so a first-time visitor on
+a dark desktop sees exactly what the page has always looked like. An unrecognised stored value
+resolves to `system` rather than being stamped, and bare `:root` carries Slate Dark's tokens so
+an unknown `data-theme` degrades to that palette instead of rendering with every colour
+undefined.
 
 ### Data model invariants
 
@@ -126,6 +159,15 @@ captured and uploaded as CI artifacts but are never a pass/fail gate. Two coupli
 - `playwright.config.mjs` and `tests/visual/server.mjs` both read `PORT` (default 8081) and must
   agree. `server.mjs` exists because `python3 -m http.server`'s listen backlog of 5 cannot take
   eight parallel workers.
+- The config pins `colorScheme: "dark"`. The page's default theme follows the OS, so without it
+  the whole suite — screenshots included — would render in whatever scheme the browser reported.
+  The theme tests cycle all six explicitly rather than relying on that default.
+
+Two of those tests cover the theme layer specifically: one measures the six access-level badges
+in every theme, the other walks each theme's tokens and asserts the ground is declared, distinct
+from the other five, and legible under `--br-ink`, `--br-dim`, `--br-accent` and `--br-danger`.
+That second one is what fails when `theme.js` offers an id `app.css` never declares — a drift the
+`:root` fallback otherwise hides completely.
 
 Specs live under `tests/visual/` specifically so `node --test tests/*.test.mjs` does not pick
 them up.

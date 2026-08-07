@@ -12,6 +12,7 @@
  *   scrollIntoView         combobox keyboard navigation calls it
  *   navigator.clipboard    the Copy JSON button
  *   URL.createObjectURL    the Download button
+ *   matchMedia             theme.js reads the OS colour-scheme preference
  */
 
 import { readFileSync } from "node:fs";
@@ -50,6 +51,17 @@ export function setupPage() {
     };
 
     window.Element.prototype.scrollIntoView = () => {};
+
+    // jsdom has no media queries at all. Reporting "does not match" for
+    // prefers-color-scheme: light lands theme.js on its dark default, which is
+    // what the page has always rendered as -- so the stub keeps every other test
+    // in the palette it was written against.
+    window.matchMedia = (query) => ({
+        matches: false,
+        media: query,
+        addEventListener() {},
+        removeEventListener() {},
+    });
 
     let copied = null;
     Object.defineProperty(window.navigator, "clipboard", {

@@ -8,6 +8,7 @@ import { loadGlobal, loadManifest } from "./data.js";
 import { renderArn } from "./arn.js";
 import { initBrowse } from "./browse.js";
 import { initGenerate, refreshGenerate } from "./generate.js";
+import { initTheme } from "./theme.js";
 import { el, option, render } from "./dom.js";
 
 const STORAGE_KEY = "apva.context";
@@ -100,6 +101,9 @@ function showFatal(error) {
 }
 
 async function main() {
+    // Outside the try, and before the fetches: the theme has to be right on the
+    // error path too, since showFatal renders its alert into this same page.
+    initTheme();
     loadContext();
 
     try {
