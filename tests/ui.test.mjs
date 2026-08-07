@@ -279,6 +279,44 @@ test("generate: the dependent-action fix adds a statement for another service", 
         policy.Statement.map((s) => [s.Action].flat()).flat().sort(),
         ["access-analyzer:StartPolicyGeneration", "iam:PassRole"],
     );
+
+    // The dependency is satisfied now, so the offer has to go. It used to
+    // survive -- the check only looked inside the statement it was reported
+    // against, never at the statement the fix had just made to satisfy it.
+    assert.equal(
+        byText(document.getElementById("gen-findings"), "button", "Add dependent"),
+        undefined,
+        "the fix withdraws its offer once applied",
+    );
+    page.cleanup();
+});
+
+test("generate: the dependent-action fix cannot be applied twice", async () => {
+    // Belt and braces for the button clearing above: clicking a stale handler
+    // before the re-render must not push a second statement carrying the same
+    // Sid, which would make the document invalid rather than merely redundant.
+    const context = { partition: "aws", region: "us-east-1", account: "" };
+    const { page } = await boot("generate", context);
+    const { document } = page;
+
+    await pickService(document, "#gen-statements .combobox", "access-analyzer");
+    const box = [...document.querySelectorAll(".action-picker .form-check-input")].find(
+        (input) => input.id.includes("StartPolicyGeneration"),
+    );
+    change(Object.assign(box, { checked: true }));
+    await settle();
+
+    const fix = byText(document.getElementById("gen-findings"), "button", "Add dependent");
+    click(fix);
+    click(fix);
+    click(fix);
+    await settle();
+
+    const policy = JSON.parse(document.getElementById("gen-output").textContent);
+    assert.equal(policy.Statement.length, 2, "no statement was duplicated");
+
+    const sids = policy.Statement.map((s) => s.Sid).filter(Boolean);
+    assert.equal(new Set(sids).size, sids.length, `duplicate Sid in ${sids.join(", ")}`);
     page.cleanup();
 });
 

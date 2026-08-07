@@ -341,6 +341,16 @@ export function validate(policyTypeKey, statements, getService) {
     /** @type {Array<Finding>} */
     const findings = [];
 
+    // What the document as a whole allows, for the dependent-action check below.
+    // A Deny does not satisfy a prerequisite, so only Allow statements count.
+    const granted = new Set();
+    const grantedAll = new Set();
+    for (const s of statements) {
+        if (s.effect !== "Allow" || !s.servicePrefix) continue;
+        if (s.wildcardAction) grantedAll.add(s.servicePrefix);
+        for (const name of s.actions) granted.add(`${s.servicePrefix}:${name}`);
+    }
+
     statements.forEach((statement, index) => {
         const add = (level, message, fix) =>
             findings.push({ level, message, statement: index, fix });
@@ -431,7 +441,13 @@ export function validate(policyTypeKey, statements, getService) {
             );
         }
 
-        const missingDeps = dependentActionsFor(service, statement.actions);
+        // Satisfied anywhere in the document, not just in this statement: the
+        // fix puts a cross-service dependency in its own statement, so scoping
+        // the check to one statement leaves the finding standing forever and
+        // every further click appends another copy of that statement.
+        const missingDeps = dependentActionsFor(service, statement.actions).filter(
+            (dep) => !granted.has(dep) && !grantedAll.has(dep.slice(0, dep.indexOf(":"))),
+        );
         if (missingDeps.length > 0) {
             add(
                 "info",
