@@ -36,12 +36,26 @@
     width: auto;
 }
 
+/* The mark carries the recognition, so the label is plain sentence case rather
+   than the tracked uppercase used for section eyebrows -- this is a destination,
+   not a heading. */
 .repo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1;
+    color: var(--br-ink);
     text-decoration: none;
 }
 
 .repo-link:hover {
-    color: var(--br-ink);
+    text-decoration: underline;
+}
+
+.repo-mark {
+    flex: none;
+    display: block;
 }
 
 .sticky-panel {

@@ -582,5 +582,12 @@ test("app: the CI badge reserves its space and points at the workflow", async ()
     const link = page.document.getElementById("ci-status");
     assert.match(link.getAttribute("href"), /\/actions\/workflows\/ci\.yml$/);
     assert.equal(link.getAttribute("rel"), "noopener");
+
+    // The repo link's mark is decorative, so the accessible name has to come
+    // from the text beside it.
+    const repo = page.document.getElementById("repo-link");
+    assert.match(repo.getAttribute("href"), /github\.com\/[^/]+\/[^/]+$/);
+    assert.match(repo.textContent.trim(), /View on GitHub/);
+    assert.equal(repo.querySelector("svg").getAttribute("aria-hidden"), "true");
     page.cleanup();
 });
