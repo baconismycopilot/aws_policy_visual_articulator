@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img"
+     aria-label="Braces around a wildcard">
+    <title>{*}</title>
+
+    <!-- Braces hugging a wildcard: the two characters every IAM policy on this
+         site is one careless afternoon away from containing.
+
+         Note before editing: this file is XML, where a comment may not contain
+         two hyphens in a row. The em dashes below are the character, not the
+         repo's usual `- -`, and a token name has to be spelled out in prose for
+         the same reason. Slipping in the ASCII pair makes the icon unparseable,
+         which browsers show by falling back to a blank page icon rather than by
+         complaining anywhere you would look.
+
+         Geometry, not <text>. A favicon is rendered by the browser chrome with
+         whatever fonts it feels like, and the page's monospace stack is not on
+         that list — an asterisk drawn as a glyph would be a different mark in
+         every browser, and vertically centring one is guesswork besides. Every
+         coordinate below sits on a 32-unit grid so the strokes land on whole
+         pixels at the sizes that matter (16, 32, 48).
+
+         The asterisk carries the weight (3.2 to the braces' 2.8) because it is
+         the joke; the braces are punctuation and read as such. At 16px that is
+         1.6px against 1.4px, which is the whole hierarchy this mark needs. -->
+
+    <!-- The palette is duplicated from app.css rather than drawn from it, and
+         that is not the usual bug. An SVG referenced by `link rel=icon` is an
+         isolated document: it inherits no custom properties from the page, so a
+         var() on one of the br tokens resolves to nothing here. It cannot
+         follow the theme picker either — there is no page to ask. What it can
+         follow is the OS, which is also what the mark actually sits on: browser
+         chrome, not the page ground. So the two grounds get Slate's dim and
+         accent, light first and dark under the media query, matching how
+         app.css orders its own defaults. -->
+    <style>
+        .brace { stroke: #5b6b7c; }
+        .star  { stroke: #a16207; }
+        @media (prefers-color-scheme: dark) {
+            .brace { stroke: #8d9bab; }
+            .star  { stroke: #f0b429; }
+        }
+    </style>
+
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <g class="brace" stroke-width="2.8">
+            <path d="M9.5 4.5C7.2 4.5 6.6 5.6 6.6 9c0 4.2-1.2 5.6-2.6 7 1.4 1.4 2.6 2.8 2.6 7 0 3.4.6 4.5 2.9 4.5"/>
+            <path d="M22.5 4.5c2.3 0 2.9 1.1 2.9 4.5 0 4.2 1.2 5.6 2.6 7-1.4 1.4-2.6 2.8-2.6 7 0 3.4-.6 4.5-2.9 4.5"/>
+        </g>
+
+        <!-- Three lines through the centre, 60 degrees apart, the first upright:
+             six arms, which is what an asterisk has in every mono face worth
+             setting IAM in. r=5.5 leaves a clear unit between the arm tips and
+             the braces at 16px; growing it closes that gap and the three shapes
+             merge into a blob. -->
+        <g class="star" stroke-width="3.2">
+            <path d="M16 10.5v11"/>
+            <path d="M11.24 13.25l9.52 5.5"/>
+            <path d="M11.24 18.75l9.52-5.5"/>
+        </g>
+    </g>
+</svg>
