@@ -192,13 +192,14 @@
 
             <div class="row g-3">
                 <div class="col-lg-7">
-                    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
-                        <div>
-                            <label class="form-label eyebrow d-block mb-1" for="gen-policy-type">Policy type</label>
-                            <select id="gen-policy-type" class="form-select w-auto"></select>
-                        </div>
-                        <div class="text-secondary small pb-2" id="gen-policy-hint"></div>
-                        <button id="gen-add-statement" class="btn-quiet ms-auto mb-1"
+                    <!-- .pane-head, not a stacked label: this row and the output
+                         panel's header are the same component, so the statement
+                         list and the document start on the same line. -->
+                    <div class="pane-head">
+                        <label class="form-label eyebrow mb-0" for="gen-policy-type">Policy type</label>
+                        <select id="gen-policy-type" class="form-select form-select-sm w-auto"></select>
+                        <span class="pane-head-hint" id="gen-policy-hint"></span>
+                        <button id="gen-add-statement" class="btn-quiet ms-auto"
                                 type="button">+ Add statement
                         </button>
                     </div>
@@ -208,7 +209,7 @@
 
                 <div class="col-lg-5">
                     <div class="sticky-panel">
-                        <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="pane-head">
                             <h2 class="eyebrow mb-0">Policy</h2>
                             <span id="gen-size" class="policy-size"></span>
                             <button id="gen-copy" class="btn-strong ms-auto" type="button">

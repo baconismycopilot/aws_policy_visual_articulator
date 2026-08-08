@@ -752,6 +752,39 @@ td.description {
    prose. Every input the user types an identifier into is monospace too, so what
    they type matches what comes out.                                          */
 
+/* --- column heads ---
+
+   The two columns are one split view, so they get one header component rather
+   than each inventing its own: eyebrow first, its controls after, the trailing
+   action pushed to the far edge. Both then occupy the same height, which is the
+   point -- the statement list and the document it produces start on the same
+   line, and the eye reads across the split instead of down two staggered
+   stacks.
+
+   min-height is what holds that: the left row's tallest child is a select and
+   the right's is a button, and without a floor the two rows would differ by the
+   few pixels between them. It is set to the select's own height, so the row is
+   sized by the tallest control either head can hold. The select is the small
+   variant for the same reason -- a full-size one sets a floor the right head
+   has nothing to fill.                                                       */
+#pane-generate .pane-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    min-height: 2rem;
+    margin-bottom: 0.875rem;
+}
+
+/* Prose beside the control it explains: sans, dim, and allowed to shrink so a
+   long hint never pushes the trailing button out of the row. */
+#pane-generate .pane-head-hint {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: var(--br-dim);
+}
+
 /* --- statement panels --- */
 
 #pane-generate .statement-card {
