@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AWS Policy Visual Articulator</title>
 
+    <!-- One SVG and no raster fallback. The mark is two shapes and a colour
+         pair, so a .ico would only be a lossier copy of this file kept in sync
+         by hand -- and a browser too old for SVG icons falls back to its own
+         blank page icon, which costs a tab-strip glyph and nothing else.
+
+         It follows the OS rather than the theme picker: an icon document
+         inherits nothing from this page and there is no way to repaint it from
+         theme.js. The note in the file itself explains what that rules out. -->
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+
     <!-- Stamps the stored theme before the first paint. theme.js does this too,
          but it is a module and therefore deferred: by the time it runs the page
          has already been painted, so choosing a light theme would flash the dark

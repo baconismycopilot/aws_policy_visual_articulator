@@ -9,6 +9,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { byText, change, click, mousedown, settle, setupPage, type } from "./harness.mjs";
 
@@ -760,4 +761,67 @@ test("theme: a remembered choice survives the reload", async () => {
     assert.equal(page.document.getElementById("theme-family").value, "carbon");
     assert.equal(page.document.getElementById("theme-mode").value, "dark");
     page.cleanup();
+});
+
+// --- Favicon -----------------------------------------------------------------
+
+/** Pull one token out of one theme block in app.css. */
+function themeToken(css, theme, token) {
+    const block = css.match(new RegExp(`\\[data-theme="${theme}"\\]\\s*\\{([^}]*)\\}`))?.[1];
+    assert.ok(block, `app.css declares ${theme}`);
+    const value = block.match(new RegExp(`--br-${token}:\\s*(\\S+?);`))?.[1];
+    assert.ok(value, `${theme} declares --br-${token}`);
+    return value;
+}
+
+test("favicon: the mark is linked and is parseable XML", async () => {
+    const page = setupPage();
+    const link = page.document.querySelector('link[rel="icon"]');
+
+    assert.ok(link, "index.html links an icon");
+    assert.equal(link.getAttribute("type"), "image/svg+xml");
+
+    // The icon is fetched relative to the page, so this is also the check that
+    // the href points at something -- the whole site is copied as one directory
+    // and a stale path fails silently in the tab strip.
+    const svg = readFileSync(new URL(`../site/${link.getAttribute("href")}`, import.meta.url), "utf8");
+
+    // SVG is XML, and XML forbids two hyphens in a row inside a comment. The
+    // file is commented in this repo's usual voice, where `- -` is an em dash,
+    // so one careless edit makes the icon unparseable -- and a browser reports
+    // that by quietly showing a blank page icon instead. Nothing else in the
+    // suite reads the file as XML, which is why this parse is the assertion.
+    const parsed = new page.window.DOMParser().parseFromString(svg, "application/xml");
+    assert.equal(
+        parsed.querySelector("parsererror")?.textContent ?? null,
+        null,
+        "favicon.svg parses as XML",
+    );
+    assert.ok(parsed.querySelector("title"), "the mark carries a title");
+    page.cleanup();
+});
+
+test("favicon: its two grounds carry Slate's own tokens", async () => {
+    // The icon repeats four literals app.css already owns, because an icon
+    // document inherits no custom properties -- see the note in the file. That
+    // is the one sanctioned copy of a palette, so it is pinned to its source
+    // here rather than left to drift the next time Slate is retuned.
+    const css = readFileSync(new URL("../site/css/app.css", import.meta.url), "utf8");
+    const svg = readFileSync(new URL("../site/favicon.svg", import.meta.url), "utf8");
+
+    const [before, after] = svg.split("@media (prefers-color-scheme: dark)");
+    assert.ok(after, "the icon offers a dark ground at all");
+
+    for (const [theme, half, where] of [
+        ["slate-light", before, "outside the media query"],
+        ["slate-dark", after, "inside the media query"],
+    ]) {
+        for (const token of ["dim", "accent"]) {
+            const value = themeToken(css, theme, token);
+            assert.ok(
+                half.includes(value),
+                `${theme}'s --br-${token} (${value}) appears ${where}`,
+            );
+        }
+    }
 });
