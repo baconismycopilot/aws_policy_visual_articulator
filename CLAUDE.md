@@ -193,6 +193,23 @@ them up.
 
 ## Data refresh and CI
 
-`.github/workflows/data.yml` rebuilds weekly and **opens a PR** — `main` is protected, so the
-bot cannot push directly. `ci.yml` is separate and read-only (test, lint, visual as three jobs)
-so PR gating needs no write permissions and does not serialize on the `pages` concurrency group.
+`.github/workflows/data.yml` rebuilds weekly and goes through a PR — `main` is protected — but
+the run is hands-off: it opens the PR, waits for the required checks, squash-merges, and the
+resulting push deploys. On any failure it opens (or comments on) an issue labelled
+`data-refresh`; that issue is the only thing a human should ever have to look at.
+
+The PR is pushed, opened and merged with `DATA_REFRESH_TOKEN`, a fine-grained PAT of the repo
+owner (contents + pull-requests write, this repo only), **not** `github.token`. Two facts make
+that load-bearing, and both are invisible until the token is swapped back:
+
+- A PR authored by `github-actions[bot]` trips the repo's first-time-contributor approval gate,
+  so `ci.yml` sits in "approve and run" until someone clicks. That was the weekly chore.
+- A merge done with `github.token` is a push by the bot, and bot pushes do not trigger
+  workflows — the `deploy` job would never fire. A PAT merge is an ordinary user push.
+
+The failure issue is the one step that deliberately uses `github.token`: an issue the owner's
+own token opened would not notify the owner. The PAT expires; when it does, the checkout step
+fails and the issue says so.
+
+`ci.yml` is separate and read-only (test, lint, visual as three jobs) so PR gating needs no write
+permissions and does not serialize on the `pages` concurrency group.
