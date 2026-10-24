@@ -112,9 +112,11 @@ artifacts, just never as a pass/fail gate.
 
 ## Refreshing
 
-`.github/workflows/data.yml` rebuilds weekly (Mondays 06:00 UTC) and **opens a
-PR** when the data changed — `main` is protected, so the bot cannot push to it
-directly. Merging that PR redeploys the site.
+`.github/workflows/data.yml` rebuilds weekly (Mondays 06:00 UTC) and, when the
+data changed, opens a PR, waits for CI, and merges it — `main` is protected, so
+the change still goes through a PR, but no human is in the loop. The merge
+redeploys the site. If anything fails, the run opens an issue labelled
+`data-refresh`.
 
 The deploy job ships whatever is committed on `main` and deliberately does not
 rebuild, so what is live always matches what is in the repo. Committing the

@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
   pages: write
   id-token: write
 
@@ -20,13 +21,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Scheduled refresh. main is protected, so this opens a PR rather than
-  # pushing -- github-actions[bot] is not an admin and cannot bypass.
+  # Scheduled refresh. main is protected, so this goes through a PR, but the PR
+  # is opened and merged with DATA_REFRESH_TOKEN (the owner's fine-grained PAT:
+  # contents + pull-requests write on this repo) rather than github.token, for
+  # two reasons that are easy to lose:
+  #
+  #   - A PR authored by github-actions[bot] hits the repo's first-time-
+  #     contributor approval gate, so ci.yml sits in "approve and run" until a
+  #     human clicks. One such run waited the full 30 days and expired.
+  #   - A merge performed with github.token is a push by the bot, and pushes made
+  #     with github.token do not trigger workflows -- the deploy job below would
+  #     never fire. A PAT merge is an ordinary user push and does.
+  #
+  # The job waits for the required checks itself and merges explicitly rather
+  # than relying on auto-merge, so a red check turns this run red and a
+  # cancelled job simply leaves the PR for next week's run to reuse.
   refresh:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Persisted as the git credential, so `git push` below is the owner.
+          token: ${{ secrets.DATA_REFRESH_TOKEN }}
 
       - uses: astral-sh/setup-uv@v9.0.0
         with:
@@ -44,8 +62,9 @@ jobs:
           node --test tests/*.test.mjs
 
       - name: Open a PR if the data changed
+        id: pr
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.DATA_REFRESH_TOKEN }}
         run: |
           # manifest.json carries the build timestamp, which changes every run.
           # Including it here would open a content-free PR every week and train
@@ -55,6 +74,7 @@ jobs:
           if git diff --quiet -- "${DATA[@]}"; then
             echo "No upstream changes."
             git checkout -- site/data
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -67,13 +87,74 @@ jobs:
           git push --force origin "$BRANCH"
 
           # Reuse the open PR if there is one, so weekly runs do not pile up.
-          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
-            gh pr create \
+          NUMBER="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')"
+          if [ -z "$NUMBER" ]; then
+            URL="$(gh pr create \
               --head "$BRANCH" \
               --title "Refresh IAM data" \
               --body "Automated rebuild from \`policies.js\` and the Service Authorization Reference.
 
-          The diff below is what AWS changed upstream. Merging redeploys the site."
+          The diff below is what AWS changed upstream. It merges itself once CI passes, and merging redeploys the site.")"
+            NUMBER="${URL##*/}"
+          fi
+
+          echo "PR #$NUMBER"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for CI, then merge
+        if: steps.pr.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DATA_REFRESH_TOKEN }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          # The pull_request event lags the push by a few seconds, and
+          # `gh pr checks --watch` errors out when no checks exist yet.
+          for _ in $(seq 1 24); do
+            COUNT="$(gh pr view "$PR" --json statusCheckRollup --jq '.statusCheckRollup | length')"
+            if [ "${COUNT:-0}" -gt 0 ]; then
+              break
+            fi
+            sleep 5
+          done
+
+          # Exits non-zero on a failed required check, which fails this job.
+          gh pr checks "$PR" --required --watch --fail-fast
+
+          gh pr merge "$PR" --squash --delete-branch
+
+      # Opened by github.token on purpose: an issue the owner's own token created
+      # would not notify the owner. A second failure comments on the open issue
+      # instead of opening another.
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          LABEL="data-refresh"
+          gh label create "$LABEL" --force \
+            --description "Opened automatically when the weekly IAM data refresh fails" \
+            --color "B60205"
+
+          BODY="The scheduled IAM data refresh failed: $RUN_URL"
+          if [ -n "$PR" ]; then
+            BODY="$BODY
+
+          Pull request: #$PR"
+          fi
+
+          EXISTING="$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number')"
+          if [ -z "$EXISTING" ]; then
+            gh issue create \
+              --title "Weekly IAM data refresh failed" \
+              --label "$LABEL" \
+              --body "$BODY
+
+          Close this issue once the cause is fixed. Repeated failures comment here rather than opening new issues."
+          else
+            gh issue comment "$EXISTING" --body "$BODY"
           fi
 
   # Deploys whatever is committed on main. Deliberately does not rebuild --
